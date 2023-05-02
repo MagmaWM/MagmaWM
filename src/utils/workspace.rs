@@ -13,6 +13,9 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
+use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
+
+const GAPS: (i32, i32) = (5,5);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MagmaWindow {
@@ -33,7 +36,7 @@ impl MagmaWindow {
 pub struct Workspace {
     windows: Vec<Rc<RefCell<MagmaWindow>>>,
     outputs: Vec<Output>,
-    // pub layout_tree: BinaryTree,
+    pub layout_tree: BinaryTree,
 }
 
 impl Workspace {
@@ -41,7 +44,7 @@ impl Workspace {
         Workspace {
             windows: Vec::new(),
             outputs: Vec::new(),
-            // layout_tree: BinaryTree::new(),
+            layout_tree: BinaryTree::new(),
         }
     }
 
@@ -51,7 +54,7 @@ impl Workspace {
             .map(|w| Ref::map(w.borrow(), |hw| &hw.window))
     }
 
-    pub fn _magmawindows(&self) -> impl Iterator<Item = Ref<'_, MagmaWindow>> {
+    pub fn magmawindows(&self) -> impl Iterator<Item = Ref<'_, MagmaWindow>> {
         self.windows.iter().map(|w| Ref::map(w.borrow(), |hw| hw))
     }
 
@@ -60,8 +63,9 @@ impl Workspace {
         self.windows
             .retain(|w| &w.borrow().window != &window.borrow().window);
         self.windows.push(window.clone());
-        // self.layout_tree
-        //     .insert(window, self.layout_tree.next_split(), 0.5);
+        self.layout_tree
+            .insert(window, self.layout_tree.next_split(), 0.5);
+        bsp_update_layout(self, GAPS);
     }
 
     pub fn remove_window(&mut self, window: &Window) -> Option<Rc<RefCell<MagmaWindow>>> {
@@ -74,7 +78,8 @@ impl Workspace {
                 true
             }
         });
-        // self.layout_tree.remove(&window);
+        self.layout_tree.remove(&window);
+        bsp_update_layout(self, GAPS);
         removed
     }
 
