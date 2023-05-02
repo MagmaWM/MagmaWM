@@ -1,6 +1,6 @@
 use std::{sync::Mutex, rc::Rc, cell::RefCell};
 
-use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}}, utils::Serial, delegate_xdg_shell};
+use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes, decoration::XdgDecorationHandler}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}, wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode}, utils::Serial, delegate_xdg_shell, delegate_xdg_decoration};
 
 use crate::{state::{Backend, MagmaState}, utils::workspace::{MagmaWindow, Workspaces}};
 
@@ -55,3 +55,25 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface) {
         }
     }
 }
+
+// Disable decorations
+impl<BackendData: Backend> XdgDecorationHandler for MagmaState<BackendData> {
+    fn new_decoration(&mut self, toplevel: ToplevelSurface) {
+        toplevel.with_pending_state(|state| {
+            // Advertise server side decoration
+            state.decoration_mode = Some(Mode::ServerSide);
+        });
+        toplevel.send_configure();
+    }
+
+    fn request_mode(
+        &mut self,
+        _toplevel: ToplevelSurface,
+        _mode: smithay::reexports::wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
+    ) {
+    }
+
+    fn unset_mode(&mut self, _toplevel: ToplevelSurface) {}
+}
+
+delegate_xdg_decoration!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
