@@ -1,0 +1,23 @@
+[package]
+name = "magma_ewm"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+tracing = "0.1.37"
+tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
+
+[dependencies.smithay]
+git = "https://github.com/Smithay/smithay.git"
+default-features = false
+features = [
+    "backend_winit",
+    "wayland_frontend",
+    "desktop",
+    "backend_session_libseat",
+    "backend_drm",
+    "renderer_multi",
+    "backend_gbm",
+    "backend_udev",
+    "backend_libinput",
+]
