@@ -1,6 +1,6 @@
 use std::{time::Instant, ffi::OsString, sync::Arc, os::fd::AsRawFd};
 
-use smithay::{wayland::{compositor::CompositorState, shell::xdg::XdgShellState, shm::ShmState, output::OutputManagerState, data_device::DataDeviceState, socket::ListeningSocketSource}, reexports::{wayland_server::{Display, backend::{ClientData, ClientId, DisconnectReason}, DisplayHandle}, calloop::{LoopHandle, LoopSignal, generic::Generic, Interest, PostAction, Mode}}, input::{SeatState, Seat, keyboard::XkbConfig}, utils::{Logical, Point}, desktop::Window};
+use smithay::{wayland::{compositor::CompositorState, shell::xdg::{XdgShellState, decoration::XdgDecorationState}, shm::ShmState, output::OutputManagerState, data_device::DataDeviceState, socket::ListeningSocketSource}, reexports::{wayland_server::{Display, backend::{ClientData, ClientId, DisconnectReason}, DisplayHandle}, calloop::{LoopHandle, LoopSignal, generic::Generic, Interest, PostAction, Mode}}, input::{SeatState, Seat, keyboard::XkbConfig}, utils::{Logical, Point}, desktop::Window};
 
 use crate::utils::workspace::Workspaces;
 
@@ -23,6 +23,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     // protocol state
     pub compositor_state: CompositorState,
     pub xdg_shell_state: XdgShellState,
+    pub xdg_decoration_state: XdgDecorationState,
     pub shm_state: ShmState,
     pub output_manager_state: OutputManagerState,
     pub data_device_state: DataDeviceState,
@@ -50,6 +51,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
 
         let compositor_state = CompositorState::new::<Self>(&dh);
         let xdg_shell_state = XdgShellState::new::<Self>(&dh);
+        let xdg_decoration_state = XdgDecorationState::new::<Self>(&dh);
         let shm_state = ShmState::new::<Self>(&dh, vec![]);
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&dh);
         let mut seat_state = SeatState::new();
@@ -73,6 +75,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             socket_name,
             compositor_state,
             xdg_shell_state,
+            xdg_decoration_state,
             loop_signal,
             shm_state,
             output_manager_state,
