@@ -109,7 +109,7 @@ impl Workspace {
         self.outputs.push(output);
     }
 
-    pub fn _remove_outputs(&mut self) {
+    pub fn remove_outputs(&mut self) {
         self.outputs.clear()
     }
 
