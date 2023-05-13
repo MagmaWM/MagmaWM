@@ -1,6 +1,6 @@
 use std::{sync::Mutex, rc::Rc, cell::RefCell};
 
-use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes, decoration::XdgDecorationHandler}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}, wayland_protocols::xdg::decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode}, utils::Serial, delegate_xdg_shell, delegate_xdg_decoration};
+use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes, decoration::XdgDecorationHandler}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}, wayland_protocols::xdg::{decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode, shell::server::xdg_toplevel::State as ToplevelState}}, utils::Serial, delegate_xdg_shell, delegate_xdg_decoration};
 
 use crate::{state::{Backend, MagmaState}, utils::workspace::{MagmaWindow, Workspaces}};
 
@@ -51,7 +51,14 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface) {
                 .initial_configure_sent
         });
         if !initial_configure_sent {
-            window.toplevel().send_configure();
+            let toplevel = window.toplevel();
+            toplevel.with_pending_state(|state| {
+                state.states.set(ToplevelState::TiledLeft);
+                state.states.set(ToplevelState::TiledRight);
+                state.states.set(ToplevelState::TiledTop);
+                state.states.set(ToplevelState::TiledBottom);
+            });
+            toplevel.send_configure();
         }
     }
 }
