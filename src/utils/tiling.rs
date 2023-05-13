@@ -51,6 +51,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace, gaps: (i32, i32)) {
             }
         }
     }
+    dbg!(&workspace.layout_tree);
     for magmawindow in workspace.magmawindows() {
         let xdg_toplevel = magmawindow.window.toplevel();
         xdg_toplevel.with_pending_state(|state| {
