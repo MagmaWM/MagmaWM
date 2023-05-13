@@ -29,7 +29,9 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     time,
                    |_, modifiers, handle| {
                         
-                        if modifiers.logo && handle.modified_sym() == xkb::KEY_q {
+                        if event.state() != KeyState::Pressed {
+                            FilterResult::Forward
+                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_q {
                             FilterResult::Intercept(KeyAction::Quit)
                         } else if modifiers.logo && handle.modified_sym() == xkb::KEY_Return {
                             FilterResult::Intercept(KeyAction::Spawn("alacritty".to_owned()))
