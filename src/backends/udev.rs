@@ -11,10 +11,10 @@ use smithay::{
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
             gles::{GlesRenderer, GlesTexture},
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture}, element::{surface::WaylandSurfaceRenderElement, texture::{TextureBuffer, TextureRenderElement}},
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture}, element::texture::{TextureBuffer, TextureRenderElement},
         },
         session::{libseat::LibSeatSession, Session},
-        udev::{self, UdevBackend, UdevEvent}, SwapBuffersError, input::{InputEvent, KeyboardKeyEvent},
+        udev::{self, UdevBackend, UdevEvent}, SwapBuffersError,
     },
     desktop::space::SpaceElement,
     output::{Output, PhysicalProperties, Mode as WlMode},
