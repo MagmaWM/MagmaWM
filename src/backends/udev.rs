@@ -11,7 +11,7 @@ use smithay::{
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
             gles::{GlesRenderer, GlesTexture},
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer}, element::{surface::WaylandSurfaceRenderElement},
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture}, element::{surface::WaylandSurfaceRenderElement, texture::{TextureBuffer, TextureRenderElement}},
         },
         session::{libseat::LibSeatSession, Session},
         udev::{self, UdevBackend, UdevEvent}, SwapBuffersError, input::{InputEvent, KeyboardKeyEvent},
@@ -25,7 +25,7 @@ use smithay::{
         nix::fcntl::OFlag,
         wayland_server::{backend::GlobalId, Display},
     },
-    utils::{DeviceFd, Transform},
+    utils::{DeviceFd, Transform, Scale},
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -33,7 +33,9 @@ use smithay_drm_extras::{
 };
 use tracing::{error, info, warn, trace};
 
-use crate::state::{Backend, CalloopData, MagmaState};
+use crate::{state::{Backend, CalloopData, MagmaState}, utils::render::CustomRenderElements};
+
+static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
 
 const SUPPORTED_FORMATS: &[Fourcc] = &[
     Fourcc::Abgr2101010,
@@ -72,6 +74,7 @@ pub struct Surface {
     global: GlobalId,
     compositor: GbmDrmCompositor,
     output: Output,
+    pointer_texture: TextureBuffer<MultiTexture>,
 }
 
 pub fn init_udev() {
@@ -443,6 +446,20 @@ impl MagmaState<UdevData> {
                     Some(device.gbm.clone()),
                 )
                 .unwrap();
+                
+                
+                let pointer_texture = TextureBuffer::from_memory(
+                    &mut renderer,
+                    CURSOR_DATA,
+                    Fourcc::Abgr8888,
+                    (64, 64),
+                    false,
+                    1,
+                    Transform::Normal,
+                    None,
+                )
+                .unwrap();
+
 
                 let surface = Surface {
                     _device_id: node,
@@ -450,6 +467,7 @@ impl MagmaState<UdevData> {
                     global,
                     compositor,
                     output: output.clone(),
+                    pointer_texture,
                 };
 
                 for workspace in self.workspaces.iter() {
@@ -483,13 +501,21 @@ impl MagmaState<UdevData> {
         let mut renderer = self.backend_data.gpus.single_renderer(&device.render_node).unwrap();
         let output = self.workspaces.current().outputs().next().unwrap();
 
-        let mut renderelements: Vec<WaylandSurfaceRenderElement<MultiRenderer<_,_>>> = vec![];
+        let mut renderelements: Vec<CustomRenderElements<MultiRenderer<_,_>>> = vec![];
+
+        renderelements.append(&mut vec![CustomRenderElements::<MultiRenderer<_,_>>::from(
+            TextureRenderElement::from_texture_buffer(
+                self.pointer_location.to_physical(Scale::from(1.0)),
+                &surface.pointer_texture,
+                None,
+                None,
+                None,
+            ),
+        )]);
 
         renderelements.extend(self.workspaces.current().render_elements(&mut renderer));
-
         
         let frame_result = surface.compositor
-
             .render_frame::<_, _, GlesTexture>(
                 &mut renderer,
                 &renderelements,
