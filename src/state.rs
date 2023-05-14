@@ -1,6 +1,25 @@
-use std::{time::Instant, ffi::OsString, sync::Arc, os::fd::AsRawFd};
+use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
-use smithay::{wayland::{compositor::CompositorState, shell::xdg::{XdgShellState, decoration::XdgDecorationState}, shm::ShmState, output::OutputManagerState, data_device::DataDeviceState, socket::ListeningSocketSource}, reexports::{wayland_server::{Display, backend::{ClientData, ClientId, DisconnectReason}, DisplayHandle}, calloop::{LoopHandle, LoopSignal, generic::Generic, Interest, PostAction, Mode}}, input::{SeatState, Seat, keyboard::XkbConfig}, utils::{Logical, Point}, desktop::Window};
+use smithay::{
+    desktop::Window,
+    input::{keyboard::XkbConfig, Seat, SeatState},
+    reexports::{
+        calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
+        wayland_server::{
+            backend::{ClientData, ClientId, DisconnectReason},
+            Display, DisplayHandle,
+        },
+    },
+    utils::{Logical, Point},
+    wayland::{
+        compositor::CompositorState,
+        data_device::DataDeviceState,
+        output::OutputManagerState,
+        shell::xdg::{decoration::XdgDecorationState, XdgShellState},
+        shm::ShmState,
+        socket::ListeningSocketSource,
+    },
+};
 
 use crate::utils::workspace::Workspaces;
 
@@ -48,7 +67,6 @@ impl<BackendData: Backend> MagmaState<BackendData> {
 
         let dh = display.handle();
 
-
         let compositor_state = CompositorState::new::<Self>(&dh);
         let xdg_shell_state = XdgShellState::new::<Self>(&dh);
         let xdg_decoration_state = XdgDecorationState::new::<Self>(&dh);
@@ -58,7 +76,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let data_device_state = DataDeviceState::new::<Self>(&dh);
         let seat_name = backend_data.seat_name();
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
-        
+
         seat.add_keyboard(XkbConfig::default(), 200, 25).unwrap();
         seat.add_pointer();
 

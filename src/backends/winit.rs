@@ -17,7 +17,7 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Rectangle, Transform}
+    utils::{Rectangle, Transform},
 };
 
 pub struct WinitData {
@@ -68,12 +68,14 @@ pub fn init_winit() {
         backend,
         damage_tracker: damage_tracked_renderer,
     };
-    let state = MagmaState::new(event_loop.handle(), event_loop.get_signal(), &mut display, winitdata);
+    let state = MagmaState::new(
+        event_loop.handle(),
+        event_loop.get_signal(),
+        &mut display,
+        winitdata,
+    );
 
-    let mut data = CalloopData {
-        display,
-        state: state,
-    };
+    let mut data = CalloopData { display, state };
 
     let state = &mut data.state;
 
@@ -96,8 +98,10 @@ pub fn init_winit() {
         })
         .unwrap();
 
-    std::process::Command::new("alacritty").spawn().expect("this should work");
-    
+    std::process::Command::new("alacritty")
+        .spawn()
+        .expect("this should work");
+
     event_loop
         .run(None, &mut data, move |_| {
             // Magma is running
@@ -150,9 +154,8 @@ pub fn winit_dispatch(
 
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
-    
-    renderelements.extend(workspace
-        .render_elements(winitdata.backend.renderer()));
+
+    renderelements.extend(workspace.render_elements(winitdata.backend.renderer()));
 
     winitdata
         .damage_tracker

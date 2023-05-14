@@ -1,7 +1,28 @@
-use std::{sync::Mutex, rc::Rc, cell::RefCell};
-use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes, decoration::XdgDecorationHandler}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}, wayland_protocols::xdg::{decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode, shell::server::xdg_toplevel::State as ToplevelState}}, utils::Serial, delegate_xdg_shell, delegate_xdg_decoration};
+use smithay::{
+    delegate_xdg_decoration, delegate_xdg_shell,
+    desktop::Window,
+    reexports::{
+        wayland_protocols::xdg::{
+            decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
+            shell::server::xdg_toplevel::State as ToplevelState,
+        },
+        wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface},
+    },
+    utils::Serial,
+    wayland::{
+        compositor::with_states,
+        shell::xdg::{
+            decoration::XdgDecorationHandler, PopupSurface, PositionerState, ToplevelSurface,
+            XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes,
+        },
+    },
+};
+use std::{cell::RefCell, rc::Rc, sync::Mutex};
 
-use crate::{state::{Backend, MagmaState}, utils::workspace::{MagmaWindow, Workspaces}};
+use crate::{
+    state::{Backend, MagmaState},
+    utils::workspace::{MagmaWindow, Workspaces},
+};
 
 impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
@@ -10,17 +31,25 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new(surface);
-        self.workspaces.current_mut().add_window(Rc::new(RefCell::new(MagmaWindow { window: window.clone(), rec: window.geometry() })))
+        self.workspaces
+            .current_mut()
+            .add_window(Rc::new(RefCell::new(MagmaWindow {
+                window: window.clone(),
+                rec: window.geometry(),
+            })))
     }
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
         let window = self
-        .workspaces
-        .all_windows()
-        .find(|w| w.toplevel() == &surface)
-        .unwrap()
-        .clone();
+            .workspaces
+            .all_windows()
+            .find(|w| w.toplevel() == &surface)
+            .unwrap()
+            .clone();
 
-    self.workspaces.workspace_from_window(&window).unwrap().remove_window(&window);
+        self.workspaces
+            .workspace_from_window(&window)
+            .unwrap()
+            .remove_window(&window);
     }
     fn new_popup(&mut self, _surface: PopupSurface, _positioner: PositionerState) {
         //TODO map popups

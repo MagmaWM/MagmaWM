@@ -17,10 +17,19 @@ static POSSIBLE_BACKENDS: &[&str] = &[
     "--tty-udev : Run magma as a tty udev client (requires root if without logind).",
 ];
 fn main() {
-    let file_appender = tracing_appender::rolling::never(format!("{}/.local/share/MagmaEWM/", std::env::var("HOME").expect("this should always be set")), format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S").to_string()));
+    let file_appender = tracing_appender::rolling::never(
+        format!(
+            "{}/.local/share/MagmaEWM/",
+            std::env::var("HOME").expect("this should always be set")
+        ),
+        format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
+    );
     let log_appender = std::io::stdout.and(file_appender);
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
-        tracing_subscriber::fmt().with_writer(log_appender).with_env_filter(env_filter).init();
+        tracing_subscriber::fmt()
+            .with_writer(log_appender)
+            .with_env_filter(env_filter)
+            .init();
     } else {
         tracing_subscriber::fmt().with_writer(log_appender).init();
     }
@@ -58,7 +67,7 @@ fn main() {
             ),
         }
     }));
-    
+
     let arg = ::std::env::args().nth(1);
     match arg.as_ref().map(|s| &s[..]) {
         Some("--winit") => {

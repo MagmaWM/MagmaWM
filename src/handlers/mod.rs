@@ -1,9 +1,21 @@
-use smithay::{desktop::Window, input::{SeatHandler, SeatState}, delegate_seat, wayland::{data_device::{DataDeviceHandler, ClientDndGrabHandler, ServerDndGrabHandler}, compositor::{CompositorHandler, CompositorState, is_sync_subsurface, get_parent}, buffer::BufferHandler, shm::{ShmHandler, ShmState}}, delegate_data_device, delegate_output, reexports::wayland_server::protocol::wl_surface::WlSurface, backend::renderer::utils::on_commit_buffer_handler, delegate_compositor, delegate_shm};
+use smithay::{
+    backend::renderer::utils::on_commit_buffer_handler,
+    delegate_compositor, delegate_data_device, delegate_output, delegate_seat, delegate_shm,
+    desktop::Window,
+    input::{SeatHandler, SeatState},
+    reexports::wayland_server::protocol::wl_surface::WlSurface,
+    wayland::{
+        buffer::BufferHandler,
+        compositor::{get_parent, is_sync_subsurface, CompositorHandler, CompositorState},
+        data_device::{ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler},
+        shm::{ShmHandler, ShmState},
+    },
+};
 
 use crate::state::{Backend, MagmaState};
 
-pub mod xdg_shell;
 pub mod input;
+pub mod xdg_shell;
 
 impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
     fn compositor_state(&mut self) -> &mut CompositorState {
@@ -62,7 +74,6 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
     ) {
     }
     fn focus_changed(&mut self, _seat: &smithay::input::Seat<Self>, _focused: Option<&Window>) {}
-
 }
 
 delegate_seat!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
@@ -81,8 +92,6 @@ impl<BackendData: Backend> ClientDndGrabHandler for MagmaState<BackendData> {}
 impl<BackendData: Backend> ServerDndGrabHandler for MagmaState<BackendData> {}
 
 delegate_data_device!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
-
-
 
 //
 // Wl Output & Xdg Output
