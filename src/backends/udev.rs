@@ -3,37 +3,50 @@ use std::{collections::HashMap, os::fd::FromRawFd, path::PathBuf, time::Duration
 use smithay::{
     backend::{
         allocator::{
-            gbm::{self, GbmAllocator, GbmDevice, GbmBufferFlags},
+            gbm::{self, GbmAllocator, GbmBufferFlags, GbmDevice},
             Fourcc,
         },
-        drm::{self, compositor::DrmCompositor, DrmDevice, DrmDeviceFd, DrmNode, NodeType, DrmError},
+        drm::{
+            self, compositor::DrmCompositor, DrmDevice, DrmDeviceFd, DrmError, DrmNode, NodeType,
+        },
         egl::{EGLDevice, EGLDisplay},
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
+            element::texture::{TextureBuffer, TextureRenderElement},
             gles::{GlesRenderer, GlesTexture},
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture}, element::texture::{TextureBuffer, TextureRenderElement},
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
         },
         session::{libseat::LibSeatSession, Session},
-        udev::{self, UdevBackend, UdevEvent}, SwapBuffersError,
+        udev::{self, UdevBackend, UdevEvent},
+        SwapBuffersError,
     },
     desktop::space::SpaceElement,
-    output::{Output, PhysicalProperties, Mode as WlMode},
+    output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
-        calloop::{EventLoop, RegistrationToken, timer::{Timer, TimeoutAction}},
-        drm::{control::{crtc, ModeTypeFlags}, Device as DrmDeviceTrait, SystemError},
+        calloop::{
+            timer::{TimeoutAction, Timer},
+            EventLoop, RegistrationToken,
+        },
+        drm::{
+            control::{crtc, ModeTypeFlags},
+            Device as DrmDeviceTrait, SystemError,
+        },
         input::Libinput,
         nix::fcntl::OFlag,
         wayland_server::{backend::GlobalId, Display},
     },
-    utils::{DeviceFd, Transform, Scale},
+    utils::{DeviceFd, Scale, Transform},
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
     edid::EdidInfo,
 };
-use tracing::{error, info, warn, trace};
+use tracing::{error, info, trace, warn};
 
-use crate::{state::{Backend, CalloopData, MagmaState}, utils::render::CustomRenderElements};
+use crate::{
+    state::{Backend, CalloopData, MagmaState},
+    utils::render::CustomRenderElements,
+};
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
 
@@ -167,8 +180,10 @@ pub fn init_udev() {
     let mut calloopdata = CalloopData { state, display };
 
     std::env::set_var("WAYLAND_DISPLAY", &calloopdata.state.socket_name);
-    std::process::Command::new("alacritty").spawn().expect("this should work");
-    
+    std::process::Command::new("alacritty")
+        .spawn()
+        .expect("this should work");
+
     event_loop
         .run(None, &mut calloopdata, move |data| {
             data.state
@@ -446,8 +461,7 @@ impl MagmaState<UdevData> {
                     Some(device.gbm.clone()),
                 )
                 .unwrap();
-                
-                
+
                 let pointer_texture = TextureBuffer::from_memory(
                     &mut renderer,
                     CURSOR_DATA,
@@ -459,7 +473,6 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-
 
                 let surface = Surface {
                     _device_id: node,
@@ -490,44 +503,47 @@ impl MagmaState<UdevData> {
 }
 
 impl MagmaState<UdevData> {
-    pub fn render(
-        &mut self,
-        node: DrmNode,
-        crtc: crtc::Handle,
-    ) -> Result<bool, SwapBuffersError>
-    {      
+    pub fn render(&mut self, node: DrmNode, crtc: crtc::Handle) -> Result<bool, SwapBuffersError> {
         let device = self.backend_data.devices.get_mut(&node).unwrap();
         let surface = device.surfaces.get_mut(&crtc).unwrap();
-        let mut renderer = self.backend_data.gpus.single_renderer(&device.render_node).unwrap();
+        let mut renderer = self
+            .backend_data
+            .gpus
+            .single_renderer(&device.render_node)
+            .unwrap();
         let output = self.workspaces.current().outputs().next().unwrap();
 
-        let mut renderelements: Vec<CustomRenderElements<MultiRenderer<_,_>>> = vec![];
+        let mut renderelements: Vec<CustomRenderElements<MultiRenderer<_, _>>> = vec![];
 
-        renderelements.append(&mut vec![CustomRenderElements::<MultiRenderer<_,_>>::from(
-            TextureRenderElement::from_texture_buffer(
-                self.pointer_location.to_physical(Scale::from(1.0)),
-                &surface.pointer_texture,
-                None,
-                None,
-                None,
+        renderelements.append(&mut vec![
+            CustomRenderElements::<MultiRenderer<_, _>>::from(
+                TextureRenderElement::from_texture_buffer(
+                    self.pointer_location.to_physical(Scale::from(1.0)),
+                    &surface.pointer_texture,
+                    None,
+                    None,
+                    None,
+                ),
             ),
-        )]);
+        ]);
 
         renderelements.extend(self.workspaces.current().render_elements(&mut renderer));
-        
-        let frame_result = surface.compositor
-            .render_frame::<_, _, GlesTexture>(
-                &mut renderer,
-                &renderelements,
-                [0.1, 0.1, 0.1, 1.0],
-            )
+
+        let frame_result = surface
+            .compositor
+            .render_frame::<_, _, GlesTexture>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
             .unwrap();
-               
+
         let rendered = frame_result.damage.is_some();
         let mut result = Ok(rendered);
         if rendered {
-            let queueresult = surface.compositor.queue_frame(()).map_err(Into::<SwapBuffersError>::into);
-            if queueresult.is_err() {result = Err(queueresult.unwrap_err());}
+            let queueresult = surface
+                .compositor
+                .queue_frame(())
+                .map_err(Into::<SwapBuffersError>::into);
+            if queueresult.is_err() {
+                result = Err(queueresult.unwrap_err());
+            }
         }
 
         let reschedule = match &result {
@@ -544,12 +560,15 @@ impl MagmaState<UdevData> {
                                 ..
                             })
                     ),
-                    SwapBuffersError::ContextLost(err) => {warn!("Rendering loop lost: {}", err); false},
+                    SwapBuffersError::ContextLost(err) => {
+                        warn!("Rendering loop lost: {}", err);
+                        false
+                    }
                 }
             }
         };
 
-        if reschedule  {
+        if reschedule {
             let output_refresh = match output.current_mode() {
                 Some(mode) => mode.refresh,
                 None => return result,
@@ -557,7 +576,8 @@ impl MagmaState<UdevData> {
             // If reschedule is true we either hit a temporary failure or more likely rendering
             // did not cause any damage on the output. In this case we just re-schedule a repaint
             // after approx. one frame to re-test for damage.
-            let reschedule_duration = Duration::from_millis((1_000_000f32 / output_refresh as f32) as u64);
+            let reschedule_duration =
+                Duration::from_millis((1_000_000f32 / output_refresh as f32) as u64);
             trace!(
                 "reschedule repaint timer with delay {:?} on {:?}",
                 reschedule_duration,

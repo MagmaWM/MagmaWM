@@ -1,2 +1,2 @@
-pub mod winit;
 pub mod udev;
+pub mod winit;
