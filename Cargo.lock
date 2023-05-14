@@ -342,6 +342,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "edid-rs"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2ab5fa33485cd85ac354df485819a63360fefa312fe04cffe65e6f175be1522c"
+
+[[package]]
 name = "errno"
 version = "0.2.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -660,6 +666,7 @@ dependencies = [
  "backtrace",
  "chrono",
  "smithay",
+ "smithay-drm-extras",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -1190,7 +1197,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smithay"
 version = "0.3.0"
-source = "git+https://github.com/Smithay/smithay.git#881dfbf36ec38f775541609c1d535dcdd811e6cf"
+source = "git+https://github.com/Smithay/smithay.git#9459ddd14e64159ad9ff4e34d967de7b460af97b"
 dependencies = [
  "appendlist",
  "bitflags",
@@ -1244,6 +1251,15 @@ dependencies = [
  "wayland-client",
  "wayland-cursor",
  "wayland-protocols 0.29.5",
+]
+
+[[package]]
+name = "smithay-drm-extras"
+version = "0.1.0"
+source = "git+https://github.com/Smithay/smithay.git#9459ddd14e64159ad9ff4e34d967de7b460af97b"
+dependencies = [
+ "drm",
+ "edid-rs",
 ]
 
 [[package]]
