@@ -12,7 +12,11 @@ use smithay::{
         egl::{EGLDevice, EGLDisplay},
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
-            element::{texture::{TextureBuffer, TextureRenderElement}, surface::WaylandSurfaceRenderElement, AsRenderElements},
+            element::{
+                surface::WaylandSurfaceRenderElement,
+                texture::{TextureBuffer, TextureRenderElement},
+                AsRenderElements,
+            },
             gles::{GlesRenderer, GlesTexture},
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
         },
@@ -20,7 +24,7 @@ use smithay::{
         udev::{self, UdevBackend, UdevEvent},
         SwapBuffersError,
     },
-    desktop::{space::SpaceElement, layer_map_for_output, LayerSurface},
+    desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
         calloop::{
@@ -35,7 +39,8 @@ use smithay::{
         nix::fcntl::OFlag,
         wayland_server::{backend::GlobalId, Display},
     },
-    utils::{DeviceFd, Scale, Transform}, wayland::shell::wlr_layer::Layer,
+    utils::{DeviceFd, Scale, Transform},
+    wayland::shell::wlr_layer::Layer,
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -542,7 +547,9 @@ impl MagmaState<UdevData> {
                         .map(|geo| (geo.loc, surface))
                 })
                 .flat_map(|(loc, surface)| {
-                    AsRenderElements::<MultiRenderer<_,_>>::render_elements::<WaylandSurfaceRenderElement<MultiRenderer<_,_>>>(
+                    AsRenderElements::<MultiRenderer<_, _>>::render_elements::<
+                        WaylandSurfaceRenderElement<MultiRenderer<_, _>>,
+                    >(
                         surface,
                         &mut renderer,
                         loc.to_physical_precise_round(1),
@@ -564,7 +571,9 @@ impl MagmaState<UdevData> {
                         .map(|geo| (geo.loc, surface))
                 })
                 .flat_map(|(loc, surface)| {
-                    AsRenderElements::<MultiRenderer<_,_>>::render_elements::<WaylandSurfaceRenderElement<MultiRenderer<_,_>>>(
+                    AsRenderElements::<MultiRenderer<_, _>>::render_elements::<
+                        WaylandSurfaceRenderElement<MultiRenderer<_, _>>,
+                    >(
                         surface,
                         &mut renderer,
                         loc.to_physical_precise_round(1),

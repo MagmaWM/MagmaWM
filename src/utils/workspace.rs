@@ -158,6 +158,12 @@ impl Workspace {
     }
 }
 
+impl Default for Workspace {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 pub struct Workspaces {
     workspaces: Vec<Workspace>,
     pub current: u8,
