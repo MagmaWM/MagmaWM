@@ -70,25 +70,23 @@ pub fn generate_layout(
     output: Size<i32, Physical>,
     gaps: (i32, i32),
 ) {
-    let size;
-    match split {
+    let size = match split {
         HorizontalOrVertical::Horizontal => {
-            size = Size::from(((lastgeo.size.w as f32 * ratio) as i32, lastgeo.size.h));
+            Size::from(((lastgeo.size.w as f32 * ratio) as i32, lastgeo.size.h))
         }
         HorizontalOrVertical::Vertical => {
-            size = Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * ratio) as i32));
+            Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * ratio) as i32))
         }
-    }
+    };
 
-    let loc: Point<i32, Logical>;
-    match split {
+    let loc: Point<i32, Logical> = match split {
         HorizontalOrVertical::Horizontal => {
-            loc = Point::from((lastgeo.loc.x, output.h - size.h));
+            Point::from((lastgeo.loc.x, output.h - size.h))
         }
         HorizontalOrVertical::Vertical => {
-            loc = Point::from((output.w - size.w, lastgeo.loc.y));
+            Point::from((output.w - size.w, lastgeo.loc.y))
         }
-    }
+    };
 
     let recgapped = Rectangle {
         size: Size::from((size.w - (gaps.1 * 2), (size.h - (gaps.1 * 2)))),
@@ -97,15 +95,14 @@ pub fn generate_layout(
 
     lastwin.borrow_mut().rec = recgapped;
 
-    let loc;
-    match split {
+    let loc = match split {
         HorizontalOrVertical::Horizontal => {
-            loc = Point::from((output.w - size.w, lastgeo.loc.y));
+            Point::from((output.w - size.w, lastgeo.loc.y))
         }
         HorizontalOrVertical::Vertical => {
-            loc = Point::from((lastgeo.loc.x, output.h - size.h));
+            Point::from((lastgeo.loc.x, output.h - size.h))
         }
-    }
+    };
 
     let rec = Rectangle { size, loc };
     let recgapped = Rectangle {
@@ -123,7 +120,7 @@ pub fn generate_layout(
         } => {
             if let BinaryTree::Window(w) = left.as_mut() {
                 w.borrow_mut().rec = rec;
-                generate_layout(right.as_mut(), &w, rec, *split, *ratio, output, gaps)
+                generate_layout(right.as_mut(), w, rec, *split, *ratio, output, gaps)
             }
         }
     }

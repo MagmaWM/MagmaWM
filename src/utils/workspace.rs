@@ -61,7 +61,7 @@ impl Workspace {
     pub fn add_window(&mut self, window: Rc<RefCell<MagmaWindow>>) {
         // add window to vec and remap if exists
         self.windows
-            .retain(|w| &w.borrow().window != &window.borrow().window);
+            .retain(|w| w.borrow().window != window.borrow().window);
         self.windows.push(window.clone());
         self.layout_tree
             .insert(window, self.layout_tree.next_split(), 0.5);
@@ -78,12 +78,12 @@ impl Workspace {
                 true
             }
         });
-        self.layout_tree.remove(&window);
+        self.layout_tree.remove(window);
         bsp_update_layout(self, GAPS);
         removed
     }
 
-    pub fn render_elements<'a, R: Renderer + ImportAll, C: From<WaylandSurfaceRenderElement<R>>>(
+    pub fn render_elements<R: Renderer + ImportAll, C: From<WaylandSurfaceRenderElement<R>>>(
         &self,
         renderer: &mut R,
     ) -> Vec<C>

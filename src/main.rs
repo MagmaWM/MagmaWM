@@ -24,7 +24,7 @@ fn main() {
         ),
         format!(
             "magma_{}.log",
-            Local::now().format("%Y-%m-%d_%H:%M:%S").to_string()
+            Local::now().format("%Y-%m-%d_%H:%M:%S")
         ),
     );
     let log_appender = std::io::stdout.and(file_appender);
