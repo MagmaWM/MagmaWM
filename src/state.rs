@@ -1,7 +1,7 @@
 use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
 use smithay::{
-    desktop::{Window, layer_map_for_output},
+    desktop::{layer_map_for_output, Window},
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -15,13 +15,16 @@ use smithay::{
         compositor::CompositorState,
         data_device::DataDeviceState,
         output::OutputManagerState,
-        shell::{xdg::{decoration::XdgDecorationState, XdgShellState}, wlr_layer::{WlrLayerShellState, Layer as WlrLayer}},
+        shell::{
+            wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
+            xdg::{decoration::XdgDecorationState, XdgShellState},
+        },
         shm::ShmState,
         socket::ListeningSocketSource,
     },
 };
 
-use crate::utils::{workspace::Workspaces, focus::FocusTarget};
+use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,

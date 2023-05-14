@@ -12,9 +12,7 @@ pub use smithay::{
     wayland::seat::WaylandFocus,
 };
 
-use crate::{
-    state::{MagmaState, Backend},
-};
+use crate::state::{Backend, MagmaState};
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum FocusTarget {
@@ -73,7 +71,9 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         match self {
             FocusTarget::Window(w) => PointerTarget::relative_motion(w, seat, data, event),
             FocusTarget::LayerSurface(l) => PointerTarget::relative_motion(l, seat, data, event),
-            FocusTarget::Popup(p) => PointerTarget::relative_motion(p.wl_surface(), seat, data, event),
+            FocusTarget::Popup(p) => {
+                PointerTarget::relative_motion(p.wl_surface(), seat, data, event)
+            }
         }
     }
     fn button(
@@ -126,7 +126,9 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
         match self {
             FocusTarget::Window(w) => KeyboardTarget::enter(w, seat, data, keys, serial),
             FocusTarget::LayerSurface(l) => KeyboardTarget::enter(l, seat, data, keys, serial),
-            FocusTarget::Popup(p) => KeyboardTarget::enter(p.wl_surface(), seat, data, keys, serial),
+            FocusTarget::Popup(p) => {
+                KeyboardTarget::enter(p.wl_surface(), seat, data, keys, serial)
+            }
         }
     }
     fn leave(
@@ -152,7 +154,9 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
     ) {
         match self {
             FocusTarget::Window(w) => KeyboardTarget::key(w, seat, data, key, state, serial, time),
-            FocusTarget::LayerSurface(l) => KeyboardTarget::key(l, seat, data, key, state, serial, time),
+            FocusTarget::LayerSurface(l) => {
+                KeyboardTarget::key(l, seat, data, key, state, serial, time)
+            }
             FocusTarget::Popup(p) => {
                 KeyboardTarget::key(p.wl_surface(), seat, data, key, state, serial, time)
             }
@@ -167,8 +171,12 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
     ) {
         match self {
             FocusTarget::Window(w) => KeyboardTarget::modifiers(w, seat, data, modifiers, serial),
-            FocusTarget::LayerSurface(l) => KeyboardTarget::modifiers(l, seat, data, modifiers, serial),
-            FocusTarget::Popup(p) => KeyboardTarget::modifiers(p.wl_surface(), seat, data, modifiers, serial),
+            FocusTarget::LayerSurface(l) => {
+                KeyboardTarget::modifiers(l, seat, data, modifiers, serial)
+            }
+            FocusTarget::Popup(p) => {
+                KeyboardTarget::modifiers(p.wl_surface(), seat, data, modifiers, serial)
+            }
         }
     }
 }

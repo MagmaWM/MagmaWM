@@ -11,7 +11,10 @@ use smithay::{
 };
 use tracing::info;
 
-use crate::{state::{Backend, MagmaState}, utils::focus::FocusTarget};
+use crate::{
+    state::{Backend, MagmaState},
+    utils::focus::FocusTarget,
+};
 
 impl<BackendData: Backend> MagmaState<BackendData> {
     pub fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>) {

@@ -3,12 +3,13 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{
-            damage::OutputDamageTracker, element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
+            damage::OutputDamageTracker,
+            element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
             gles::GlesRenderer,
         },
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
-    desktop::{space::SpaceElement, LayerSurface, layer_map_for_output},
+    desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::{
         calloop::{
@@ -17,7 +18,8 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Rectangle, Transform, Scale}, wayland::shell::wlr_layer::Layer,
+    utils::{Rectangle, Scale, Transform},
+    wayland::shell::wlr_layer::Layer,
 };
 
 pub struct WinitData {
@@ -178,8 +180,7 @@ pub fn winit_dispatch(
             }),
     );
 
-    renderelements.extend(workspace
-        .render_elements(winitdata.backend.renderer()));
+    renderelements.extend(workspace.render_elements(winitdata.backend.renderer()));
 
     renderelements.extend(
         lower

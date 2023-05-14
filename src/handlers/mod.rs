@@ -1,18 +1,26 @@
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
-    delegate_compositor, delegate_data_device, delegate_output, delegate_seat, delegate_shm,
+    delegate_compositor, delegate_data_device, delegate_layer_shell, delegate_output,
+    delegate_seat, delegate_shm,
     desktop::{layer_map_for_output, LayerSurface},
     input::{SeatHandler, SeatState},
-    reexports::wayland_server::protocol::{wl_surface::WlSurface, wl_output::WlOutput},
+    output::Output,
+    reexports::wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
     wayland::{
         buffer::BufferHandler,
         compositor::{get_parent, is_sync_subsurface, CompositorHandler, CompositorState},
         data_device::{ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler},
-        shm::{ShmHandler, ShmState}, shell::wlr_layer::{WlrLayerShellHandler, WlrLayerShellState, Layer, LayerSurface as WlrLayerSurface},
-    }, output::Output, delegate_layer_shell,
+        shell::wlr_layer::{
+            Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
+        },
+        shm::{ShmHandler, ShmState},
+    },
 };
 
-use crate::{state::{Backend, MagmaState}, utils::focus::FocusTarget};
+use crate::{
+    state::{Backend, MagmaState},
+    utils::focus::FocusTarget,
+};
 
 pub mod input;
 pub mod xdg_shell;
@@ -73,7 +81,12 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
         _image: smithay::input::pointer::CursorImageStatus,
     ) {
     }
-    fn focus_changed(&mut self, _seat: &smithay::input::Seat<Self>, _focused: Option<&FocusTarget>) {}
+    fn focus_changed(
+        &mut self,
+        _seat: &smithay::input::Seat<Self>,
+        _focused: Option<&FocusTarget>,
+    ) {
+    }
 }
 
 delegate_seat!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
@@ -99,7 +112,7 @@ delegate_data_device!(@<BackendData: Backend + 'static> MagmaState<BackendData>)
 
 delegate_output!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
-impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData>{
+impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {
     fn shell_state(&mut self) -> &mut WlrLayerShellState {
         &mut self.layer_shell_state
     }
@@ -111,9 +124,10 @@ impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData>{
         _layer: Layer,
         namespace: String,
     ) {
-        let output = output.as_ref().and_then(Output::from_resource).unwrap_or_else(|| {
-            self.workspaces.current().outputs().next().unwrap().clone()
-        });
+        let output = output
+            .as_ref()
+            .and_then(Output::from_resource)
+            .unwrap_or_else(|| self.workspaces.current().outputs().next().unwrap().clone());
         let mut map = layer_map_for_output(&output);
         let layer_surface = LayerSurface::new(surface, namespace);
         map.map_layer(&layer_surface).unwrap();
