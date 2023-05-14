@@ -10,7 +10,7 @@ mod backends;
 mod handlers;
 mod utils;
 fn main() {
-    let file_appender = tracing_appender::rolling::hourly("/tmp/magma/", format!("magma_{}.log", Local::now().to_string()));
+    let file_appender = tracing_appender::rolling::never("/tmp/magma/", format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S").to_string()));
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
         tracing_subscriber::fmt().with_writer(file_appender).with_env_filter(env_filter).init();
     } else {
