@@ -541,8 +541,8 @@ impl MagmaState<UdevData> {
                 .compositor
                 .queue_frame(())
                 .map_err(Into::<SwapBuffersError>::into);
-            if queueresult.is_err() {
-                result = Err(queueresult.unwrap_err());
+            if let Err(queueresult) = queueresult {
+                result = Err(queueresult);
             }
         }
 
@@ -594,7 +594,7 @@ impl MagmaState<UdevData> {
 
         self.workspaces.current().windows().for_each(|window| {
             window.send_frame(
-                &output,
+                output,
                 self.start_time.elapsed(),
                 Some(Duration::ZERO),
                 |_, _| Some(output.clone()),

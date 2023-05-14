@@ -38,7 +38,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace, gaps: (i32, i32)) {
             if let BinaryTree::Window(w) = left.as_mut() {
                 generate_layout(
                     right.as_mut(),
-                    &w,
+                    w,
                     Rectangle {
                         loc: Point::from((gaps.0, gaps.0)),
                         size: Size::from((output.w - (gaps.0 * 2), output.h - (gaps.0 * 2))),
