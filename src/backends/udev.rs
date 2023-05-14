@@ -62,7 +62,7 @@ pub type GbmDrmCompositor =
 
 pub struct UdevData {
     pub session: LibSeatSession,
-    primary_gpu: DrmNode,
+    _primary_gpu: DrmNode,
     gpus: GpuManager<GbmGlesBackend<GlesRenderer>>,
     devices: HashMap<DrmNode, Device>,
 }
@@ -83,10 +83,10 @@ pub struct Device {
 
 pub struct Surface {
     _device_id: DrmNode,
-    render_node: DrmNode,
+    _render_node: DrmNode,
     global: GlobalId,
     compositor: GbmDrmCompositor,
-    output: Output,
+    _output: Output,
     pointer_texture: TextureBuffer<MultiTexture>,
 }
 
@@ -115,7 +115,7 @@ pub fn init_udev() {
 
     let data = UdevData {
         session,
-        primary_gpu,
+        _primary_gpu: primary_gpu,
         gpus,
         devices: HashMap::new(),
     };
@@ -476,10 +476,10 @@ impl MagmaState<UdevData> {
 
                 let surface = Surface {
                     _device_id: node,
-                    render_node: device.render_node,
+                    _render_node: device.render_node,
                     global,
                     compositor,
-                    output: output.clone(),
+                    _output: output.clone(),
                     pointer_texture,
                 };
 
