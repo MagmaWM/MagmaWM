@@ -15,7 +15,7 @@ use smithay::{
 
 use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
 
-const GAPS: (i32, i32) = (5,5);
+const GAPS: (i32, i32) = (5, 5);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MagmaWindow {
@@ -171,7 +171,7 @@ impl Workspaces {
         }
     }
 
-    pub fn _outputs (&self) -> impl Iterator<Item = &Output> {
+    pub fn _outputs(&self) -> impl Iterator<Item = &Output> {
         self.workspaces.iter().flat_map(|w| w.outputs())
     }
 
