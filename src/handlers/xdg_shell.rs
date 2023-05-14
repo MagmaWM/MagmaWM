@@ -1,9 +1,7 @@
 use std::{sync::Mutex, rc::Rc, cell::RefCell};
-
 use smithay::{wayland::{shell::xdg::{XdgShellHandler, XdgShellState, ToplevelSurface, PopupSurface, PositionerState, XdgToplevelSurfaceRoleAttributes, decoration::XdgDecorationHandler}, compositor::with_states}, desktop::{Window}, reexports::{wayland_server::protocol::{wl_seat::WlSeat, wl_surface::WlSurface}, wayland_protocols::xdg::{decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode, shell::server::xdg_toplevel::State as ToplevelState}}, utils::Serial, delegate_xdg_shell, delegate_xdg_decoration};
 
 use crate::{state::{Backend, MagmaState}, utils::workspace::{MagmaWindow, Workspaces}};
-
 
 impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     fn xdg_shell_state(&mut self) -> &mut XdgShellState {
