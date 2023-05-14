@@ -128,12 +128,10 @@ impl BinaryTree {
                 } = right.as_ref()
                 {
                     right.next_split()
+                } else if *split == HorizontalOrVertical::Horizontal {
+                    HorizontalOrVertical::Vertical
                 } else {
-                    if *split == HorizontalOrVertical::Horizontal {
-                        HorizontalOrVertical::Vertical
-                    } else {
-                        HorizontalOrVertical::Horizontal
-                    }
+                    HorizontalOrVertical::Horizontal
                 }
             }
         }

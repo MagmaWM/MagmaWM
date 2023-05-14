@@ -15,7 +15,7 @@ use smithay::{
 
 use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
 
-const GAPS: (i32, i32) = (5,5);
+const GAPS: (i32, i32) = (5, 5);
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MagmaWindow {
@@ -61,7 +61,7 @@ impl Workspace {
     pub fn add_window(&mut self, window: Rc<RefCell<MagmaWindow>>) {
         // add window to vec and remap if exists
         self.windows
-            .retain(|w| &w.borrow().window != &window.borrow().window);
+            .retain(|w| w.borrow().window != window.borrow().window);
         self.windows.push(window.clone());
         self.layout_tree
             .insert(window, self.layout_tree.next_split(), 0.5);
@@ -78,12 +78,12 @@ impl Workspace {
                 true
             }
         });
-        self.layout_tree.remove(&window);
+        self.layout_tree.remove(window);
         bsp_update_layout(self, GAPS);
         removed
     }
 
-    pub fn render_elements<'a, R: Renderer + ImportAll, C: From<WaylandSurfaceRenderElement<R>>>(
+    pub fn render_elements<R: Renderer + ImportAll, C: From<WaylandSurfaceRenderElement<R>>>(
         &self,
         renderer: &mut R,
     ) -> Vec<C>
@@ -109,7 +109,7 @@ impl Workspace {
         self.outputs.push(output);
     }
 
-    pub fn _remove_outputs(&mut self) {
+    pub fn remove_outputs(&mut self) {
         self.outputs.clear()
     }
 
@@ -171,7 +171,7 @@ impl Workspaces {
         }
     }
 
-    pub fn _outputs (&self) -> impl Iterator<Item = &Output> {
+    pub fn _outputs(&self) -> impl Iterator<Item = &Output> {
         self.workspaces.iter().flat_map(|w| w.outputs())
     }
 
