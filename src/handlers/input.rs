@@ -212,7 +212,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
 
     pub fn set_input_focus_auto(&mut self) {
         let under = self.window_under();
-        if let Some(d) = under.clone() {
+        if let Some(d) = under {
             self.set_input_focus(d.0);
         }
     }

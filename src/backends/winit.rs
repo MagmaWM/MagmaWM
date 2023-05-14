@@ -77,7 +77,7 @@ pub fn init_winit() {
 
     let mut data = CalloopData {
         display,
-        state: state,
+        state,
     };
 
     let state = &mut data.state;
