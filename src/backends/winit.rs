@@ -3,12 +3,12 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{
-            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement,
+            damage::OutputDamageTracker, element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
             gles::GlesRenderer,
         },
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
-    desktop::space::SpaceElement,
+    desktop::{space::SpaceElement, LayerSurface, layer_map_for_output},
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::{
         calloop::{
@@ -17,7 +17,7 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Rectangle, Transform},
+    utils::{Rectangle, Transform, Scale}, wayland::shell::wlr_layer::Layer,
 };
 
 pub struct WinitData {
@@ -154,8 +154,50 @@ pub fn winit_dispatch(
 
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
+    let layer_map = layer_map_for_output(output);
+    let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
+        .layers()
+        .rev()
+        .partition(|s| matches!(s.layer(), Layer::Background | Layer::Bottom));
 
-    renderelements.extend(workspace.render_elements(winitdata.backend.renderer()));
+    renderelements.extend(
+        upper
+            .into_iter()
+            .filter_map(|surface| {
+                layer_map
+                    .layer_geometry(surface)
+                    .map(|geo| (geo.loc, surface))
+            })
+            .flat_map(|(loc, surface)| {
+                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                    surface,
+                    winitdata.backend.renderer(),
+                    loc.to_physical_precise_round(1),
+                    Scale::from(1.0),
+                )
+            }),
+    );
+
+    renderelements.extend(workspace
+        .render_elements(winitdata.backend.renderer()));
+
+    renderelements.extend(
+        lower
+            .into_iter()
+            .filter_map(|surface| {
+                layer_map
+                    .layer_geometry(surface)
+                    .map(|geo| (geo.loc, surface))
+            })
+            .flat_map(|(loc, surface)| {
+                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                    surface,
+                    winitdata.backend.renderer(),
+                    loc.to_physical_precise_round(1),
+                    Scale::from(1.0),
+                )
+            }),
+    );
 
     winitdata
         .damage_tracker
