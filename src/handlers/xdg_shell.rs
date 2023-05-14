@@ -1,6 +1,6 @@
 use smithay::{
     delegate_xdg_decoration, delegate_xdg_shell,
-    desktop::{Window, PopupKind, PopupManager},
+    desktop::{PopupKind, PopupManager, Window},
     reexports::{
         wayland_protocols::xdg::{
             decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
@@ -13,12 +13,12 @@ use smithay::{
         compositor::with_states,
         shell::xdg::{
             decoration::XdgDecorationHandler, PopupSurface, PositionerState, ToplevelSurface,
-            XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes, XdgPopupSurfaceData,
+            XdgPopupSurfaceData, XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes,
         },
     },
 };
-use tracing::warn;
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use tracing::warn;
 
 use crate::{
     state::{Backend, MagmaState},
@@ -54,7 +54,6 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     }
     fn new_popup(&mut self, surface: PopupSurface, positioner: PositionerState) {
         surface.with_pending_state(|state| {
-
             state.geometry = positioner.get_geometry();
         });
         if let Err(err) = self.popup_manager.track_popup(PopupKind::from(surface)) {
