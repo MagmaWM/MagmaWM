@@ -22,10 +22,7 @@ fn main() {
             "{}/.local/share/MagmaEWM/",
             std::env::var("HOME").expect("this should always be set")
         ),
-        format!(
-            "magma_{}.log",
-            Local::now().format("%Y-%m-%d_%H:%M:%S")
-        ),
+        format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
     );
     let log_appender = std::io::stdout.and(file_appender);
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {

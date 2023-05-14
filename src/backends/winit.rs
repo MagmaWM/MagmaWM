@@ -75,10 +75,7 @@ pub fn init_winit() {
         winitdata,
     );
 
-    let mut data = CalloopData {
-        display,
-        state,
-    };
+    let mut data = CalloopData { display, state };
 
     let state = &mut data.state;
 
