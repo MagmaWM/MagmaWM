@@ -1,14 +1,14 @@
-
 use smithay::{
     backend::input::{
-        self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent, KeyState,
+        self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent, KeyState,
+        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
     },
+    desktop::Window,
     input::{
-        keyboard::{FilterResult, xkb},
+        keyboard::{xkb, FilterResult},
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
-    utils::{Logical, Point, SERIAL_COUNTER}, desktop::Window,
+    utils::{Logical, Point, SERIAL_COUNTER},
 };
 use tracing::info;
 
@@ -27,8 +27,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     event.state(),
                     serial,
                     time,
-                   |_, modifiers, handle| {
-                        
+                    |_, modifiers, handle| {
                         if event.state() != KeyState::Pressed {
                             FilterResult::Forward
                         } else if modifiers.logo && handle.modified_sym() == xkb::KEY_q {
@@ -38,24 +37,28 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                         } else if modifiers.logo && handle.modified_sym() == xkb::KEY_w {
                             FilterResult::Intercept(KeyAction::CloseWindow)
                         } else {
-                            FilterResult::Forward    
+                            FilterResult::Forward
                         }
-                        
                     },
                 ) {
                     match action {
                         KeyAction::Quit => self.loop_signal.stop(),
                         KeyAction::Spawn(command) => {
-                        if let Err(err) = std::process::Command::new("/bin/sh").arg("-c").arg(command.clone()).spawn() {
-                            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-                           }
-                        },
+                            if let Err(err) = std::process::Command::new("/bin/sh")
+                                .arg("-c")
+                                .arg(command.clone())
+                                .spawn()
+                            {
+                                info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+                            }
+                        }
                         KeyAction::CloseWindow => {
-                        if let Some(d) = self
-                        .workspaces
-                        .current()
-                        .window_under(self.pointer_location) {
-                            d.0.toplevel().send_close()
+                            if let Some(d) = self
+                                .workspaces
+                                .current()
+                                .window_under(self.pointer_location)
+                            {
+                                d.0.toplevel().send_close()
                             }
                         }
                     }
@@ -112,7 +115,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 let under = self.window_under();
 
                 self.set_input_focus_auto();
-                
+
                 pointer.motion(
                     self,
                     under,
@@ -189,21 +192,27 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         }
 
         let (pos_x, pos_y) = pos.into();
-        let (max_x, max_y) = self.workspaces.current().output_geometry(self.workspaces.current().outputs().next().unwrap()).unwrap().size.into();
+        let (max_x, max_y) = self
+            .workspaces
+            .current()
+            .output_geometry(self.workspaces.current().outputs().next().unwrap())
+            .unwrap()
+            .size
+            .into();
         let clamped_x = pos_x.max(0.0).min(max_x as f64);
         let clamped_y = pos_y.max(0.0).min(max_y as f64);
         (clamped_x, clamped_y).into()
     }
 
-    pub fn set_input_focus(&mut self, target: Window){
-            let keyboard = self.seat.get_keyboard().unwrap();
-            let serial = SERIAL_COUNTER.next_serial();
-            keyboard.set_focus(self, Some(target), serial);
+    pub fn set_input_focus(&mut self, target: Window) {
+        let keyboard = self.seat.get_keyboard().unwrap();
+        let serial = SERIAL_COUNTER.next_serial();
+        keyboard.set_focus(self, Some(target), serial);
     }
 
-    pub fn set_input_focus_auto(&mut self){
+    pub fn set_input_focus_auto(&mut self) {
         let under = self.window_under();
-        if let Some(d) = under.clone() {
+        if let Some(d) = under {
             self.set_input_focus(d.0);
         }
     }

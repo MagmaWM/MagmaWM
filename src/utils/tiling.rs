@@ -38,7 +38,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace, gaps: (i32, i32)) {
             if let BinaryTree::Window(w) = left.as_mut() {
                 generate_layout(
                     right.as_mut(),
-                    &w,
+                    w,
                     Rectangle {
                         loc: Point::from((gaps.0, gaps.0)),
                         size: Size::from((output.w - (gaps.0 * 2), output.h - (gaps.0 * 2))),
@@ -70,25 +70,19 @@ pub fn generate_layout(
     output: Size<i32, Physical>,
     gaps: (i32, i32),
 ) {
-    let size;
-    match split {
+    let size = match split {
         HorizontalOrVertical::Horizontal => {
-            size = Size::from(((lastgeo.size.w as f32 * ratio) as i32, lastgeo.size.h));
+            Size::from(((lastgeo.size.w as f32 * ratio) as i32, lastgeo.size.h))
         }
         HorizontalOrVertical::Vertical => {
-            size = Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * ratio) as i32));
+            Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * ratio) as i32))
         }
-    }
+    };
 
-    let loc: Point<i32, Logical>;
-    match split {
-        HorizontalOrVertical::Horizontal => {
-            loc = Point::from((lastgeo.loc.x, output.h - size.h));
-        }
-        HorizontalOrVertical::Vertical => {
-            loc = Point::from((output.w - size.w, lastgeo.loc.y));
-        }
-    }
+    let loc: Point<i32, Logical> = match split {
+        HorizontalOrVertical::Horizontal => Point::from((lastgeo.loc.x, output.h - size.h)),
+        HorizontalOrVertical::Vertical => Point::from((output.w - size.w, lastgeo.loc.y)),
+    };
 
     let recgapped = Rectangle {
         size: Size::from((size.w - (gaps.1 * 2), (size.h - (gaps.1 * 2)))),
@@ -97,15 +91,10 @@ pub fn generate_layout(
 
     lastwin.borrow_mut().rec = recgapped;
 
-    let loc;
-    match split {
-        HorizontalOrVertical::Horizontal => {
-            loc = Point::from((output.w - size.w, lastgeo.loc.y));
-        }
-        HorizontalOrVertical::Vertical => {
-            loc = Point::from((lastgeo.loc.x, output.h - size.h));
-        }
-    }
+    let loc = match split {
+        HorizontalOrVertical::Horizontal => Point::from((output.w - size.w, lastgeo.loc.y)),
+        HorizontalOrVertical::Vertical => Point::from((lastgeo.loc.x, output.h - size.h)),
+    };
 
     let rec = Rectangle { size, loc };
     let recgapped = Rectangle {
@@ -123,7 +112,7 @@ pub fn generate_layout(
         } => {
             if let BinaryTree::Window(w) = left.as_mut() {
                 w.borrow_mut().rec = rec;
-                generate_layout(right.as_mut(), &w, rec, *split, *ratio, output, gaps)
+                generate_layout(right.as_mut(), w, rec, *split, *ratio, output, gaps)
             }
         }
     }

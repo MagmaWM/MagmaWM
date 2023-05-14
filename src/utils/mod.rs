@@ -1,4 +1,4 @@
-pub mod workspace;
 pub mod binarytree;
-pub mod tiling;
 pub mod render;
+pub mod tiling;
+pub mod workspace;
