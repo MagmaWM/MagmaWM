@@ -80,12 +80,8 @@ pub fn generate_layout(
     };
 
     let loc: Point<i32, Logical> = match split {
-        HorizontalOrVertical::Horizontal => {
-            Point::from((lastgeo.loc.x, output.h - size.h))
-        }
-        HorizontalOrVertical::Vertical => {
-            Point::from((output.w - size.w, lastgeo.loc.y))
-        }
+        HorizontalOrVertical::Horizontal => Point::from((lastgeo.loc.x, output.h - size.h)),
+        HorizontalOrVertical::Vertical => Point::from((output.w - size.w, lastgeo.loc.y)),
     };
 
     let recgapped = Rectangle {
@@ -96,12 +92,8 @@ pub fn generate_layout(
     lastwin.borrow_mut().rec = recgapped;
 
     let loc = match split {
-        HorizontalOrVertical::Horizontal => {
-            Point::from((output.w - size.w, lastgeo.loc.y))
-        }
-        HorizontalOrVertical::Vertical => {
-            Point::from((lastgeo.loc.x, output.h - size.h))
-        }
+        HorizontalOrVertical::Horizontal => Point::from((output.w - size.w, lastgeo.loc.y)),
+        HorizontalOrVertical::Vertical => Point::from((lastgeo.loc.x, output.h - size.h)),
     };
 
     let rec = Rectangle { size, loc };
