@@ -191,6 +191,7 @@ pub fn init_udev() {
                 .all_windows()
                 .for_each(|e| e.refresh());
             data.display.flush_clients().unwrap();
+            data.state.popup_manager.cleanup();
         })
         .unwrap();
 }

@@ -1,7 +1,7 @@
 use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
 use smithay::{
-    desktop::Window,
+    desktop::{Window, PopupManager},
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -47,6 +47,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub output_manager_state: OutputManagerState,
     pub data_device_state: DataDeviceState,
     pub seat_state: SeatState<MagmaState<BackendData>>,
+    pub popup_manager: PopupManager,
 
     pub seat: Seat<Self>,
     pub seat_name: String,
@@ -97,6 +98,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             loop_signal,
             shm_state,
             output_manager_state,
+            popup_manager: PopupManager::default(),
             seat_state,
             data_device_state,
             seat,
