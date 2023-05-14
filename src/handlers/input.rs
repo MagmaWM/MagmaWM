@@ -1,14 +1,16 @@
+
 use smithay::{
     backend::input::{
         self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
+        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent, KeyState,
     },
     input::{
-        keyboard::{FilterResult},
+        keyboard::{FilterResult, xkb},
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
     utils::{Logical, Point, SERIAL_COUNTER}, desktop::Window,
 };
+use tracing::info;
 
 use crate::state::{Backend, MagmaState};
 
@@ -19,14 +21,45 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
 
-                self.seat.get_keyboard().unwrap().input::<(), _>(
+                if let Some(action) = self.seat.get_keyboard().unwrap().input(
                     self,
                     event.key_code(),
                     event.state(),
                     serial,
                     time,
-                    |_, _, _| FilterResult::Forward,
-                );
+                   |_, modifiers, handle| {
+                        
+                        if event.state() != KeyState::Pressed {
+                            FilterResult::Forward
+                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_q {
+                            FilterResult::Intercept(KeyAction::Quit)
+                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_Return {
+                            FilterResult::Intercept(KeyAction::Spawn("alacritty".to_owned()))
+                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_w {
+                            FilterResult::Intercept(KeyAction::CloseWindow)
+                        } else {
+                            FilterResult::Forward    
+                        }
+                        
+                    },
+                ) {
+                    match action {
+                        KeyAction::Quit => self.loop_signal.stop(),
+                        KeyAction::Spawn(command) => {
+                        if let Err(err) = std::process::Command::new("/bin/sh").arg("-c").arg(command.clone()).spawn() {
+                            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+                           }
+                        },
+                        KeyAction::CloseWindow => {
+                        if let Some(d) = self
+                        .workspaces
+                        .current()
+                        .window_under(self.pointer_location) {
+                            d.0.toplevel().send_close()
+                            }
+                        }
+                    }
+                };
             }
             InputEvent::PointerMotion { event } => {
                 let serial = SERIAL_COUNTER.next_serial();
@@ -174,4 +207,10 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             self.set_input_focus(d.0);
         }
     }
+}
+
+enum KeyAction {
+    Quit,
+    Spawn(String),
+    CloseWindow,
 }
