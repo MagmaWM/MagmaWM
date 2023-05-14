@@ -171,7 +171,7 @@ impl Workspaces {
         }
     }
 
-    pub fn _outputs(&self) -> impl Iterator<Item = &Output> {
+    pub fn outputs(&self) -> impl Iterator<Item = &Output> {
         self.workspaces.iter().flat_map(|w| w.outputs())
     }
 
