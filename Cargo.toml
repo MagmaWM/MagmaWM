@@ -1,5 +1,5 @@
 [package]
-name = "magma_ewm"
+name = "magmawm"
 version = "0.0.1"
 edition = "2021"
 
