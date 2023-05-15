@@ -7,15 +7,15 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug executable 'magma_ewm'",
+            "name": "Debug executable 'magmawm'",
             "cargo": {
                 "args": [
                     "build",
-                    "--bin=magma_ewm",
-                    "--package=magma_ewm"
+                    "--bin=magmawm",
+                    "--package=magmawm"
                 ],
                 "filter": {
-                    "name": "magma_ewm",
+                    "name": "magmawm",
                     "kind": "bin"
                 }
             },
@@ -25,16 +25,16 @@
         {
             "type": "lldb",
             "request": "launch",
-            "name": "Debug unit tests in executable 'magma_ewm'",
+            "name": "Debug unit tests in executable 'magmawm'",
             "cargo": {
                 "args": [
                     "test",
                     "--no-run",
-                    "--bin=magma_ewm",
-                    "--package=magma_ewm"
+                    "--bin=magmawm",
+                    "--package=magmawm"
                 ],
                 "filter": {
-                    "name": "magma_ewm",
+                    "name": "magmawm",
                     "kind": "bin"
                 }
             },
