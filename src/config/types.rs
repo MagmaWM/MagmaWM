@@ -1,5 +1,5 @@
 use serde::Deserialize;
-use smithay::input::keyboard::{keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig};
+use smithay::input::keyboard::{keysyms as KeySyms, xkb, Keysym, ModifiersState};
 
 use super::{KeyModifier, KeyModifiers};
 
