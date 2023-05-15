@@ -21,7 +21,7 @@ use smithay::{
     },
 };
 
-use crate::utils::workspace::Workspaces;
+use crate::{config::Config, utils::workspace::Workspaces};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
@@ -31,6 +31,8 @@ pub struct CalloopData<BackendData: Backend + 'static> {
 pub trait Backend {
     fn seat_name(&self) -> String;
 }
+
+pub static config: Config = Config::load();
 
 pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,

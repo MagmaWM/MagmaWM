@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fs::OpenOptions};
 
-use serde::Deserialize;
 use self::types::{deserialize_KeyModifiers, deserialize_Keysym};
+use serde::Deserialize;
 
 mod types;
 #[derive(Debug, Deserialize)]
