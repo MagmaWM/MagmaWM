@@ -1,6 +1,6 @@
 use smithay::{
     delegate_xdg_decoration, delegate_xdg_shell,
-    desktop::{Window, layer_map_for_output, WindowSurfaceType},
+    desktop::{layer_map_for_output, Window, WindowSurfaceType},
     reexports::{
         wayland_protocols::xdg::{
             decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
@@ -11,10 +11,13 @@ use smithay::{
     utils::Serial,
     wayland::{
         compositor::with_states,
-        shell::{xdg::{
-            decoration::XdgDecorationHandler, PopupSurface, PositionerState, ToplevelSurface,
-            XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes,
-        }, wlr_layer::LayerSurfaceData},
+        shell::{
+            wlr_layer::LayerSurfaceData,
+            xdg::{
+                decoration::XdgDecorationHandler, PopupSurface, PositionerState, ToplevelSurface,
+                XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes,
+            },
+        },
     },
 };
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
@@ -117,7 +120,6 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface) {
             layer.layer_surface().send_configure();
         }
     };
-
 }
 
 // Disable decorations
