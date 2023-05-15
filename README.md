@@ -35,7 +35,7 @@ Manjaro is not officially supported.
 ### Installing rust
 Run the following command to install rust:
 ```
-$ rustup install stable
+$ rustup install nightly
 ```
 
 ### Building MagmaWM
