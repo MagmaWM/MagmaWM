@@ -680,6 +680,7 @@ version = "0.0.1"
 dependencies = [
  "backtrace",
  "chrono",
+ "once_cell",
  "ron",
  "serde",
  "smithay",

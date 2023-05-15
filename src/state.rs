@@ -1,5 +1,6 @@
 use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
+use once_cell::sync::Lazy;
 use smithay::{
     desktop::Window,
     input::{keyboard::XkbConfig, Seat, SeatState},
@@ -21,7 +22,10 @@ use smithay::{
     },
 };
 
-use crate::{config::Config, utils::workspace::Workspaces};
+use crate::{
+    config::{load_config, Config},
+    utils::workspace::Workspaces,
+};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
@@ -32,7 +36,7 @@ pub trait Backend {
     fn seat_name(&self) -> String;
 }
 
-pub static config: Config = Config::load();
+pub static CONFIG: Lazy<Config> = Lazy::new(load_config);
 
 pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,
@@ -82,7 +86,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         seat.add_keyboard(XkbConfig::default(), 200, 25).unwrap();
         seat.add_pointer();
 
-        let workspaces = Workspaces::new(1);
+        let workspaces = Workspaces::new(CONFIG.workspaces);
 
         let socket_name = Self::init_wayland_listener(&mut loop_handle, display);
 
