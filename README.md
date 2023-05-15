@@ -13,5 +13,38 @@ Currently Planned Featured to be Built-in by Default:
 * Screencopy Protocols for Screensharing/Screenshots
 * Lots of eye candy like blur, animations etc
 
+## Build
+
+### Installing rustup
+First, you will need to install `rustup` with your package manager of choice.
+
+#### Debian and derivatives (Ubuntu, Linux Mint, MX Linux, etc.)
+```
+# apt install rustup
+```
+#### Arch and derivatives (EndeavourOS, Garuda, etc.)
+Manjaro is not officially supported.
+```
+# pacman -S rustup
+```
+#### openSUSE
+```
+# zypper in rustup
+```
+
+### Installing rust
+Run the following command to install rust:
+```
+$ rustup install stable
+```
+
+### Building MagmaWM
+Clone the git repository and build with the following command:
+```
+$ cargo build
+```
+Dependencies should be automatically resolved by cargo.
+
+
 ## Install
 **MagmaWM** is still under devlopment and can't be installed yet.
