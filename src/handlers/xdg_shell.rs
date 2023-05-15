@@ -1,6 +1,6 @@
 use smithay::{
     delegate_xdg_decoration, delegate_xdg_shell,
-    desktop::Window,
+    desktop::{Window, layer_map_for_output, WindowSurfaceType},
     reexports::{
         wayland_protocols::xdg::{
             decoration::zv1::server::zxdg_toplevel_decoration_v1::Mode,
@@ -11,10 +11,10 @@ use smithay::{
     utils::Serial,
     wayland::{
         compositor::with_states,
-        shell::xdg::{
+        shell::{xdg::{
             decoration::XdgDecorationHandler, PopupSurface, PositionerState, ToplevelSurface,
             XdgShellHandler, XdgShellState, XdgToplevelSurfaceRoleAttributes,
-        },
+        }, wlr_layer::LayerSurfaceData},
     },
 };
 use std::{cell::RefCell, rc::Rc, sync::Mutex};
@@ -88,6 +88,36 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface) {
             toplevel.send_configure();
         }
     }
+
+    if let Some(output) = workspaces.current().outputs().find(|o| {
+        let map = layer_map_for_output(o);
+        map.layer_for_surface(surface, WindowSurfaceType::TOPLEVEL)
+            .is_some()
+    }) {
+        let initial_configure_sent = with_states(surface, |states| {
+            states
+                .data_map
+                .get::<LayerSurfaceData>()
+                .unwrap()
+                .lock()
+                .unwrap()
+                .initial_configure_sent
+        });
+        let mut map = layer_map_for_output(output);
+
+        // arrange the layers before sending the initial configure
+        // to respect any size the client may have sent
+        map.arrange();
+        // send the initial configure if relevant
+        if !initial_configure_sent {
+            let layer = map
+                .layer_for_surface(surface, WindowSurfaceType::TOPLEVEL)
+                .unwrap();
+
+            layer.layer_surface().send_configure();
+        }
+    };
+
 }
 
 // Disable decorations
