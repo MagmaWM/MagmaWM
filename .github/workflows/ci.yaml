@@ -131,4 +131,4 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: release artifact
-          path: target/release/magmaEWM
+          path: target/release/magmawm

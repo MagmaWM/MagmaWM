@@ -49,7 +49,7 @@ pub fn init_winit() {
         PhysicalProperties {
             size: (0, 0).into(),
             subpixel: Subpixel::Unknown,
-            make: "MagmaEWM".into(),
+            make: "MagmaWM".into(),
             model: "Winit".into(),
         },
     );
