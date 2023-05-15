@@ -13,28 +13,26 @@ pub struct Config {
     pub gaps: (i32, i32),
 }
 
-impl Config {
-    pub fn load() -> Config {
-        let xdg = xdg::BaseDirectories::new().ok();
-        let locations = if let Some(base) = xdg {
-            vec![
-                base.get_config_file("magmawm.ron"),
-                base.get_config_file("magmawm/config.ron"),
-            ]
-        } else {
-            vec![]
-        };
+pub fn load_config() -> Config {
+    let xdg = xdg::BaseDirectories::new().ok();
+    let locations = if let Some(base) = xdg {
+        vec![
+            base.get_config_file("magmawm.ron"),
+            base.get_config_file("magmawm/config.ron"),
+        ]
+    } else {
+        vec![]
+    };
 
-        for path in locations {
-            dbg!("Trying config location: {}", path.display());
-            if path.exists() {
-                dbg!("Using config at {}", path.display());
-                return ron::de::from_reader(OpenOptions::new().read(true).open(path).unwrap())
-                    .expect("Malformed config file");
-            }
+    for path in locations {
+        dbg!("Trying config location: {}", path.display());
+        if path.exists() {
+            dbg!("Using config at {}", path.display());
+            return ron::de::from_reader(OpenOptions::new().read(true).open(path).unwrap())
+                .expect("Malformed config file");
         }
-        panic!("No config file found")
     }
+    panic!("No config file found")
 }
 
 fn default_gaps() -> (i32, i32) {

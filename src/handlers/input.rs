@@ -14,7 +14,7 @@ use tracing::info;
 
 use crate::{
     config::Action,
-    state::{Backend, MagmaState, config},
+    state::{Backend, MagmaState, CONFIG},
 };
 
 impl<BackendData: Backend> MagmaState<BackendData> {
@@ -30,8 +30,8 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     event.state(),
                     serial,
                     time,
-                    |data, modifiers, handle| {
-                        for (binding, action) in config.keybindings.iter() {
+                    |_, modifiers, handle| {
+                        for (binding, action) in CONFIG.keybindings.iter() {
                             if event.state() == KeyState::Pressed
                                 && binding.modifiers == *modifiers
                                 && handle.raw_syms().contains(&binding.key)
@@ -215,8 +215,8 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 self.workspaces.activate(id);
                 self.set_input_focus_auto();
             }
-            Action::MoveWindowToWorkspace(id) => todo!(),
-            Action::MoveWindowAndSwitchToWorkspace(u8) => todo!(),
+            Action::MoveWindowToWorkspace(_) => todo!(),
+            Action::MoveWindowAndSwitchToWorkspace(_) => todo!(),
             Action::ToggleWindowFloating => todo!(),
             Action::Spawn(command) => {
                 if let Err(err) = std::process::Command::new("/bin/sh")
