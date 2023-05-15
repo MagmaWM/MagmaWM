@@ -215,7 +215,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 self.workspaces.activate(id);
                 self.set_input_focus_auto();
             }
-            Action::MoveWindowToWorkspace(id) => {
+            Action::MoveWindow(id) => {
                 let window = self
                     .workspaces
                     .current()
@@ -226,8 +226,8 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     self.workspaces.move_window_to_workspace(&window, id);
                 }
             }
-            Action::MoveWindowAndSwitchToWorkspace(u8) => {
-                self.handle_action(Action::MoveWindowToWorkspace(u8));
+            Action::MoveAndSwitch(u8) => {
+                self.handle_action(Action::MoveWindow(u8));
                 self.handle_action(Action::Workspace(u8));
             }
             Action::ToggleWindowFloating => todo!(),
