@@ -19,7 +19,7 @@ static POSSIBLE_BACKENDS: &[&str] = &[
 fn main() {
     let file_appender = tracing_appender::rolling::never(
         format!(
-            "{}/.local/share/MagmaWM/",
+            "{}/.local/share/MagmaEWM/",
             std::env::var("HOME").expect("this should always be set")
         ),
         format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),

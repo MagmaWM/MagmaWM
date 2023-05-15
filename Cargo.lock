@@ -660,7 +660,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "magmawm"
+name = "magma_ewm"
 version = "0.0.1"
 dependencies = [
  "backtrace",
