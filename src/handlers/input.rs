@@ -223,8 +223,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     .map(|d| d.0.clone());
 
                 if let Some(window) = window {
-                    self.workspaces
-                        .move_window_to_workspace(&window, id);
+                    self.workspaces.move_window_to_workspace(&window, id);
                 }
             }
             Action::MoveWindowAndSwitchToWorkspace(u8) => {
