@@ -11,6 +11,7 @@ mod backends;
 mod handlers;
 mod state;
 mod utils;
+mod config;
 
 static POSSIBLE_BACKENDS: &[&str] = &[
     "--winit : Run magma as a X11 or Wayland client using winit.",
