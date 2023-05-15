@@ -19,7 +19,7 @@ use smithay::{
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::focus::FocusTarget,
+    utils::{focus::FocusTarget, tiling::bsp_update_layout},
 };
 
 pub mod input;
@@ -131,7 +131,10 @@ impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {
         let mut map = layer_map_for_output(&output);
         let layer_surface = LayerSurface::new(surface, namespace);
         map.map_layer(&layer_surface).unwrap();
-        self.set_input_focus(FocusTarget::LayerSurface(layer_surface))
+        self.set_input_focus(FocusTarget::LayerSurface(layer_surface));
+        for workspace in self.workspaces.iter() {
+            bsp_update_layout(workspace, (5, 5));
+        }
     }
 
     fn layer_destroyed(&mut self, surface: WlrLayerSurface) {
@@ -145,7 +148,10 @@ impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {
         }) {
             map.unmap_layer(&layer);
         }
-        self.set_input_focus_auto()
+        self.set_input_focus_auto();
+        for workspace in self.workspaces.iter() {
+            bsp_update_layout(workspace, (5, 5));
+        }
     }
 }
 
