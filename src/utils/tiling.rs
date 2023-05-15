@@ -2,12 +2,15 @@ use std::{cell::RefCell, rc::Rc};
 
 use smithay::utils::{Logical, Physical, Point, Rectangle, Size};
 
+use crate::state::CONFIG;
+
 use super::{
     binarytree::{BinaryTree, HorizontalOrVertical},
     workspace::{MagmaWindow, Workspace},
 };
 
-pub fn bsp_update_layout(workspace: &mut Workspace, gaps: (i32, i32)) {
+pub fn bsp_update_layout(workspace: &mut Workspace) {
+    let gaps = CONFIG.gaps;
     //recalculate the size and location of the windows
 
     let output = workspace

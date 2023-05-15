@@ -13,8 +13,6 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
-use crate::state::CONFIG;
-
 use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
 
 #[derive(Debug, PartialEq, Clone)]
@@ -65,7 +63,7 @@ impl Workspace {
         self.windows.push(window.clone());
         self.layout_tree
             .insert(window, self.layout_tree.next_split(), 0.5);
-        bsp_update_layout(self, CONFIG.gaps);
+        bsp_update_layout(self);
     }
 
     pub fn remove_window(&mut self, window: &Window) -> Option<Rc<RefCell<MagmaWindow>>> {
@@ -79,7 +77,7 @@ impl Workspace {
             }
         });
         self.layout_tree.remove(window);
-        bsp_update_layout(self, CONFIG.gaps);
+        bsp_update_layout(self);
         removed
     }
 
@@ -199,5 +197,16 @@ impl Workspaces {
 
     pub fn activate(&mut self, id: u8) {
         self.current = id;
+    }
+    pub fn move_window_to_workspace(&mut self, window: &Window, workspace: u8) {
+        let mut removed = None;
+        if let Some(ws) = self.workspace_from_window(window) {
+            removed = ws.remove_window(window);
+            bsp_update_layout(ws)
+        }
+        if let Some(removed) = removed {
+            self.workspaces[workspace as usize].add_window(removed);
+            bsp_update_layout(&mut self.workspaces[workspace as usize])
+        }
     }
 }
