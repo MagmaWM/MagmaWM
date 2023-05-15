@@ -1,4 +1,4 @@
-# MagmaWM: Magma Extensible Window Manager
+# MagmaWM: Magma Window Manager (and Compositor)
 ## Work In Progress
 <p align="center">
     <img src="https://cdn.discordapp.com/attachments/1090909610828898304/1101557907453120545/Magma_Concept_3__2.png" style="width: 15%;" alt="wmlogo"></img>
@@ -11,6 +11,7 @@ Currently Planned Featured to be Built-in by Default:
 * Dynamic Tiling and Floating Windows
 * Keyboard and Monitor Managament
 * Screencopy Protocols for Screensharing/Screenshots
+* Lots of eye candy like blur, animations etc
 
 ## Install
 **MagmaWM** is still under devlopment and can't be installed yet.
