@@ -137,3 +137,9 @@ impl BinaryTree {
         }
     }
 }
+
+impl Default for BinaryTree {
+    fn default() -> Self {
+        Self::new()
+    }
+}
