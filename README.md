@@ -8,7 +8,6 @@
   <p align="center">
     <img src="https://img.shields.io/github/languages/top/magmawm/magmawm?style=for-the-badge"/>
     <img src="https://img.shields.io/github/commit-activity/m/magmawm/magmawm?style=for-the-badge"/>
-    <img src="https://img.shields.io/github/license/magmawm/magmawm?style=for-the-badge"/>
     <img src="https://img.shields.io/github/issues/magmawm/magmawm?style=for-the-badge"/>
   </p>
 
@@ -49,8 +48,10 @@ When you have finished making all of your changes, commit them using [Git](https
 
 ## Dependencies
 Depedencies needed to compile MagmaWM
-### Arch
-(TO BE ADDED BY HIFI)
+### Ubuntu/Debian
+```bash
+sudo apt install libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
+```
 
 ## Install
 **MagmaWM** is still under devlopment and can't be installed yet.
