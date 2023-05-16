@@ -28,7 +28,10 @@ use tracing::warn;
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::workspace::{MagmaWindow, Workspaces},
+    utils::{
+        focus::FocusTarget,
+        workspace::{MagmaWindow, Workspaces},
+    },
 };
 
 impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
@@ -43,7 +46,8 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
             .add_window(Rc::new(RefCell::new(MagmaWindow {
                 window: window.clone(),
                 rec: window.geometry(),
-            })))
+            })));
+        self.set_input_focus(FocusTarget::Window(window));
     }
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
         let window = self
@@ -57,6 +61,7 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
             .workspace_from_window(&window)
             .unwrap()
             .remove_window(&window);
+        self.set_input_focus_auto();
     }
     fn new_popup(&mut self, surface: PopupSurface, positioner: PositionerState) {
         surface.with_pending_state(|state| {
