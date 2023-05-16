@@ -103,12 +103,12 @@ pub fn init_winit() {
 
     for command in &CONFIG.autostart {
         if let Err(err) = std::process::Command::new("/bin/sh")
-        .arg("-c")
-        .arg(command)
-        .spawn()
-            {
-                info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-            }
+            .arg("-c")
+            .arg(command)
+            .spawn()
+        {
+            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+        }
     }
 
     event_loop

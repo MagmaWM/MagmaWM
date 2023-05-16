@@ -1,10 +1,10 @@
 use std::{cell::RefCell, rc::Rc};
 
+use crate::state::CONFIG;
 use smithay::{
     desktop::layer_map_for_output,
     utils::{Logical, Physical, Point, Rectangle, Size},
 };
-use crate::state::CONFIG;
 
 use super::{
     binarytree::{BinaryTree, HorizontalOrVertical},
