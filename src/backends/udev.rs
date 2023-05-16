@@ -39,7 +39,7 @@ use smithay::{
         nix::fcntl::OFlag,
         wayland_server::{backend::GlobalId, Display},
     },
-    utils::{DeviceFd, Scale, Transform},
+    utils::{DeviceFd, Scale, Size, Transform},
     wayland::shell::wlr_layer::Layer,
 };
 use smithay_drm_extras::{
@@ -49,7 +49,7 @@ use smithay_drm_extras::{
 use tracing::{error, info, trace, warn};
 
 use crate::{
-    state::{Backend, CalloopData, MagmaState},
+    state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::render::CustomRenderElements,
 };
 
@@ -185,9 +185,16 @@ pub fn init_udev() {
     let mut calloopdata = CalloopData { state, display };
 
     std::env::set_var("WAYLAND_DISPLAY", &calloopdata.state.socket_name);
-    std::process::Command::new("alacritty")
-        .spawn()
-        .expect("this should work");
+
+    for command in &CONFIG.autostart {
+        if let Err(err) = std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(command)
+            .spawn()
+        {
+            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+        }
+    }
 
     event_loop
         .run(None, &mut calloopdata, move |data| {
@@ -381,12 +388,29 @@ impl MagmaState<UdevData> {
                     connector.interface().as_str(),
                     connector.interface_id()
                 );
-
-                let drm_mode = *connector
-                    .modes()
-                    .iter()
-                    .find(|mode| mode.mode_type().contains(ModeTypeFlags::PREFERRED))
-                    .unwrap_or(&connector.modes()[0]);
+                info!("New output connected, name: {}", name);
+                let drm_mode = if CONFIG.outputs.contains_key(&name) {
+                    let output_config = &CONFIG.outputs[&name];
+                    *connector
+                        .modes()
+                        .iter()
+                        .filter(|mode| {
+                            let (x, y) = mode.size();
+                            Size::from((x as i32, y as i32)) == output_config.mode_size()
+                        })
+                        // and then select the closest refresh rate (e.g. to match 59.98 as 60)
+                        .min_by_key(|mode| {
+                            let refresh_rate = WlMode::from(**mode).refresh;
+                            (output_config.mode_refresh() as i32 - refresh_rate).abs()
+                        })
+                        .expect("No matching mode found for output config")
+                } else {
+                    *connector
+                        .modes()
+                        .iter()
+                        .find(|mode| mode.mode_type().contains(ModeTypeFlags::PREFERRED))
+                        .unwrap_or(&connector.modes()[0])
+                };
 
                 let drm_surface = device
                     .drm

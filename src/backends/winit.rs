@@ -21,6 +21,7 @@ use smithay::{
     utils::{Rectangle, Scale, Transform},
     wayland::shell::wlr_layer::Layer,
 };
+use tracing::info;
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlesRenderer>,
@@ -32,7 +33,7 @@ impl Backend for WinitData {
         "winit".to_string()
     }
 }
-use crate::state::{Backend, CalloopData, MagmaState};
+use crate::state::{Backend, CalloopData, MagmaState, CONFIG};
 
 pub fn init_winit() {
     let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
@@ -100,9 +101,15 @@ pub fn init_winit() {
         })
         .unwrap();
 
-    std::process::Command::new("alacritty")
-        .spawn()
-        .expect("this should work");
+    for command in &CONFIG.autostart {
+        if let Err(err) = std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(command)
+            .spawn()
+        {
+            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+        }
+    }
 
     event_loop
         .run(None, &mut data, move |_| {
