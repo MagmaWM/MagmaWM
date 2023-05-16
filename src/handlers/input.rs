@@ -4,7 +4,7 @@ use smithay::{
         KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
     },
     input::{
-        keyboard::FilterResult,
+        keyboard::{xkb, FilterResult},
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
     utils::{Logical, Point, SERIAL_COUNTER},
@@ -12,10 +12,61 @@ use smithay::{
 use tracing::info;
 
 use crate::{
+    backends::udev::UdevData,
     config::Action,
     state::{Backend, MagmaState, CONFIG},
     utils::focus::FocusTarget,
 };
+
+impl MagmaState<UdevData> {
+    pub fn process_input_event_udev<I: InputBackend>(
+        &mut self,
+        event: InputEvent<I>,
+    ) -> Option<i32> {
+        match event {
+            InputEvent::Keyboard { event, .. } => {
+                let serial = SERIAL_COUNTER.next_serial();
+                let time = Event::time_msec(&event);
+
+                if let Some(action) = self.seat.get_keyboard().unwrap().input(
+                    self,
+                    event.key_code(),
+                    event.state(),
+                    serial,
+                    time,
+                    |_, modifiers, handle| {
+                        for (binding, action) in CONFIG.keybindings.iter() {
+                            if event.state() == KeyState::Pressed
+                                && binding.modifiers == *modifiers
+                                && handle.raw_syms().contains(&binding.key)
+                            {
+                                return FilterResult::Intercept(action.clone());
+                            } else if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12)
+                                .contains(&handle.modified_sym())
+                            {
+                                // VTSwitch
+                                let vt =
+                                    (handle.modified_sym() - xkb::KEY_XF86Switch_VT_1 + 1) as i32;
+                                return FilterResult::Intercept(Action::VTSwitch(vt));
+                            }
+                        }
+                        FilterResult::Forward
+                    },
+                ) {
+                    match action {
+                        Action::VTSwitch(vt) => return Some(vt),
+                        _ => self.handle_action(action),
+                    }
+                };
+                None
+            }
+            event => {
+                self.process_input_event(event);
+                None
+            }
+        }
+    }
+}
 
 impl<BackendData: Backend> MagmaState<BackendData> {
     pub fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>) {
@@ -240,7 +291,9 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
                 }
             }
-            Action::VTSwitch(_) => todo!(),
+            Action::VTSwitch(_) => {
+                info!("VTSwitch is not used in Winit backend.")
+            }
         }
     }
 }
