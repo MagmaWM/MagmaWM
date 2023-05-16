@@ -23,7 +23,7 @@ use smithay::{
             xdg::{decoration::XdgDecorationState, XdgShellState},
         },
         shm::ShmState,
-        socket::ListeningSocketSource,
+        socket::ListeningSocketSource, primary_selection::PrimarySelectionState,
     },
 };
 use tracing::warn;
@@ -56,6 +56,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub shm_state: ShmState,
     pub output_manager_state: OutputManagerState,
     pub data_device_state: DataDeviceState,
+    pub primary_selection_state: PrimarySelectionState,
     pub seat_state: SeatState<MagmaState<BackendData>>,
     pub layer_shell_state: WlrLayerShellState,
     pub popup_manager: PopupManager,
@@ -86,6 +87,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&dh);
         let mut seat_state = SeatState::new();
         let data_device_state = DataDeviceState::new::<Self>(&dh);
+        let primary_selection_state = PrimarySelectionState::new::<Self>(&dh);
         let seat_name = backend_data.seat_name();
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
         let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
@@ -121,6 +123,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             popup_manager: PopupManager::default(),
             seat_state,
             data_device_state,
+            primary_selection_state,
             layer_shell_state,
             seat,
             workspaces,
