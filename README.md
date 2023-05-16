@@ -22,7 +22,7 @@ Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 - [x] RON Configuration
 - [ ] Nvidia Support
 - [ ] Dynamic Tiling and Floating Windows
-- [ ] Keyboard and Monitor Managament
+- [x] Keyboard and Monitor Managament
 - [ ] [Screencopy](https://wayland.app/protocols/wlr-screencopy-unstable-v1) Protocols for Screensharing/Screenshots
 - [ ] Lots of eye candy like blur, animations etc
 - [x] Can display wayland applications
