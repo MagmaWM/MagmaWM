@@ -1,6 +1,6 @@
 use std::{collections::HashMap, fs::OpenOptions};
 
-use self::types::{deserialize_KeyModifiers, deserialize_Keysym};
+use self::types::{deserialize_KeyModifiers, deserialize_Keysym, XkbConfig};
 use serde::Deserialize;
 
 mod types;
@@ -11,6 +11,9 @@ pub struct Config {
 
     #[serde(default = "default_gaps")]
     pub gaps: (i32, i32),
+
+    #[serde(default = "default_xkb")]
+    pub xkb: XkbConfig,
 }
 
 pub fn load_config() -> Config {
@@ -37,6 +40,10 @@ pub fn load_config() -> Config {
 
 fn default_gaps() -> (i32, i32) {
     (5, 5)
+}
+
+fn default_xkb() -> XkbConfig {
+    XkbConfig::default()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

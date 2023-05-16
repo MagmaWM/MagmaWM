@@ -24,6 +24,7 @@ use smithay::{
         socket::ListeningSocketSource,
     },
 };
+use tracing::warn;
 
 use crate::config::{load_config, Config};
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
@@ -86,7 +87,15 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
         let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
 
-        seat.add_keyboard(XkbConfig::default(), 200, 25).unwrap();
+        let conf = CONFIG.xkb.clone();
+        if let Err(err) = seat.add_keyboard((&conf).into(), 200, 25) {
+            warn!(
+                ?err,
+                "Failed to load provided xkb config. Trying default...",
+            );
+            seat.add_keyboard(XkbConfig::default(), 200, 25)
+                .expect("Failed to load xkb configuration files");
+        }
         seat.add_pointer();
 
         let workspaces = Workspaces::new(CONFIG.workspaces);
