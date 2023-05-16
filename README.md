@@ -19,14 +19,15 @@ Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 
 ## Features
 
-- [ ] RON Configuration
+- [x] RON Configuration
+- [ ] Nvidia Support
 - [ ] Dynamic Tiling and Floating Windows
 - [ ] Keyboard and Monitor Managament
 - [ ] Screencopy Protocols for Screensharing/Screenshots
 - [ ] Lots of eye candy like blur, animations etc
 - [x] Can display wayland applications
 - [ ] Xwayland Support
-- [ ] Working Popups
+- [x] Working Popups
 - [x] Can be launched from TTY
 
 ## Build
@@ -41,7 +42,7 @@ You will need to install MagmaWM's dependencies with your package manager of cho
 #### Arch and derivatives (EndeavourOS, Garuda, etc.)
 Manjaro is **not** supported.
 ```bash
-# pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib
+# pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib mesa
 ```
 #### openSUSE Tumbleweed
 ```bash
