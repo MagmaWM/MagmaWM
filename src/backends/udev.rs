@@ -498,7 +498,7 @@ impl MagmaState<UdevData> {
                     Fourcc::Abgr8888,
                     (64, 64),
                     false,
-                    1,
+                    2,
                     Transform::Normal,
                     None,
                 )
