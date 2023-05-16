@@ -18,12 +18,13 @@ use smithay::{
         compositor::CompositorState,
         data_device::DataDeviceState,
         output::OutputManagerState,
+        primary_selection::PrimarySelectionState,
         shell::{
             wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
             xdg::{decoration::XdgDecorationState, XdgShellState},
         },
         shm::ShmState,
-        socket::ListeningSocketSource, primary_selection::PrimarySelectionState,
+        socket::ListeningSocketSource,
     },
 };
 use tracing::warn;
