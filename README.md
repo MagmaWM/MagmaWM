@@ -1,6 +1,6 @@
 <p align="center">
   <p align="center">
-    <img src="https://cdn.discordapp.com/attachments/1090909610828898304/1101557907453120545/Magma_Concept_3__2.png" style="width: 15%;" alt="wmlogo"></img>
+    <img src="https://magmawm.org/assets/magma.png" style="width: 15%;" alt="wmlogo"></img>
     <h1 align="center">MagmaWM</h1>
  <h3 align="center">a versatile and customizable Wayland Compositor</h3>
 </p>
