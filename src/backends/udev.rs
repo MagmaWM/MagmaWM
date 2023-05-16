@@ -12,7 +12,11 @@ use smithay::{
         egl::{EGLDevice, EGLDisplay},
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
-            element::texture::{TextureBuffer, TextureRenderElement},
+            element::{
+                surface::WaylandSurfaceRenderElement,
+                texture::{TextureBuffer, TextureRenderElement},
+                AsRenderElements,
+            },
             gles::{GlesRenderer, GlesTexture},
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
         },
@@ -20,7 +24,7 @@ use smithay::{
         udev::{self, UdevBackend, UdevEvent},
         SwapBuffersError,
     },
-    desktop::space::SpaceElement,
+    desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
         calloop::{
@@ -36,6 +40,7 @@ use smithay::{
         wayland_server::{backend::GlobalId, Display},
     },
     utils::{DeviceFd, Scale, Transform},
+    wayland::shell::wlr_layer::Layer,
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -528,7 +533,57 @@ impl MagmaState<UdevData> {
             ),
         ]);
 
+        let layer_map = layer_map_for_output(output);
+        let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
+            .layers()
+            .rev()
+            .partition(|s| matches!(s.layer(), Layer::Background | Layer::Bottom));
+
+        renderelements.extend(
+            upper
+                .into_iter()
+                .filter_map(|surface| {
+                    layer_map
+                        .layer_geometry(surface)
+                        .map(|geo| (geo.loc, surface))
+                })
+                .flat_map(|(loc, surface)| {
+                    AsRenderElements::<MultiRenderer<_, _>>::render_elements::<
+                        WaylandSurfaceRenderElement<MultiRenderer<_, _>>,
+                    >(
+                        surface,
+                        &mut renderer,
+                        loc.to_physical_precise_round(1),
+                        Scale::from(1.0),
+                    )
+                    .into_iter()
+                    .map(CustomRenderElements::Surface)
+                }),
+        );
+
         renderelements.extend(self.workspaces.current().render_elements(&mut renderer));
+
+        renderelements.extend(
+            lower
+                .into_iter()
+                .filter_map(|surface| {
+                    layer_map
+                        .layer_geometry(surface)
+                        .map(|geo| (geo.loc, surface))
+                })
+                .flat_map(|(loc, surface)| {
+                    AsRenderElements::<MultiRenderer<_, _>>::render_elements::<
+                        WaylandSurfaceRenderElement<MultiRenderer<_, _>>,
+                    >(
+                        surface,
+                        &mut renderer,
+                        loc.to_physical_precise_round(1),
+                        Scale::from(1.0),
+                    )
+                    .into_iter()
+                    .map(CustomRenderElements::Surface)
+                }),
+        );
 
         let frame_result = surface
             .compositor
