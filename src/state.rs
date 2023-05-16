@@ -1,5 +1,6 @@
 use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
+use once_cell::sync::Lazy;
 use smithay::{
     desktop::{
         layer_map_for_output, {PopupManager, Window},
@@ -25,7 +26,9 @@ use smithay::{
         socket::ListeningSocketSource,
     },
 };
+use tracing::warn;
 
+use crate::config::{load_config, Config};
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
@@ -36,6 +39,8 @@ pub struct CalloopData<BackendData: Backend + 'static> {
 pub trait Backend {
     fn seat_name(&self) -> String;
 }
+
+pub static CONFIG: Lazy<Config> = Lazy::new(load_config);
 
 pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,
@@ -85,10 +90,18 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
         let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
 
-        seat.add_keyboard(XkbConfig::default(), 200, 25).unwrap();
+        let conf = CONFIG.xkb.clone();
+        if let Err(err) = seat.add_keyboard((&conf).into(), 200, 25) {
+            warn!(
+                ?err,
+                "Failed to load provided xkb config. Trying default...",
+            );
+            seat.add_keyboard(XkbConfig::default(), 200, 25)
+                .expect("Failed to load xkb configuration files");
+        }
         seat.add_pointer();
 
-        let workspaces = Workspaces::new(1);
+        let workspaces = Workspaces::new(CONFIG.workspaces);
 
         let socket_name = Self::init_wayland_listener(&mut loop_handle, display);
 

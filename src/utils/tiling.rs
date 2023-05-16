@@ -1,5 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
+use crate::state::CONFIG;
 use smithay::{
     desktop::layer_map_for_output,
     utils::{Logical, Physical, Point, Rectangle, Size},
@@ -10,7 +11,8 @@ use super::{
     workspace::{MagmaWindow, Workspace},
 };
 
-pub fn bsp_update_layout(workspace: &mut Workspace, gaps: (i32, i32)) {
+pub fn bsp_update_layout(workspace: &mut Workspace) {
+    let gaps = CONFIG.gaps;
     //recalculate the size and location of the windows
 
     let output = layer_map_for_output(workspace.outputs().next().unwrap()).non_exclusive_zone();

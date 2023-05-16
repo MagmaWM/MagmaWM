@@ -4,7 +4,7 @@ use smithay::{
         KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
     },
     input::{
-        keyboard::{xkb, FilterResult},
+        keyboard::FilterResult,
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
     utils::{Logical, Point, SERIAL_COUNTER},
@@ -12,7 +12,8 @@ use smithay::{
 use tracing::info;
 
 use crate::{
-    state::{Backend, MagmaState},
+    config::Action,
+    state::{Backend, MagmaState, CONFIG},
     utils::focus::FocusTarget,
 };
 
@@ -30,40 +31,18 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     serial,
                     time,
                     |_, modifiers, handle| {
-                        if event.state() != KeyState::Pressed {
-                            FilterResult::Forward
-                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_q {
-                            FilterResult::Intercept(KeyAction::Quit)
-                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_Return {
-                            FilterResult::Intercept(KeyAction::Spawn("alacritty".to_owned()))
-                        } else if modifiers.logo && handle.modified_sym() == xkb::KEY_w {
-                            FilterResult::Intercept(KeyAction::CloseWindow)
-                        } else {
-                            FilterResult::Forward
+                        for (binding, action) in CONFIG.keybindings.iter() {
+                            if event.state() == KeyState::Pressed
+                                && binding.modifiers == *modifiers
+                                && handle.raw_syms().contains(&binding.key)
+                            {
+                                return FilterResult::Intercept(action.clone());
+                            }
                         }
+                        FilterResult::Forward
                     },
                 ) {
-                    match action {
-                        KeyAction::Quit => self.loop_signal.stop(),
-                        KeyAction::Spawn(command) => {
-                            if let Err(err) = std::process::Command::new("/bin/sh")
-                                .arg("-c")
-                                .arg(command.clone())
-                                .spawn()
-                            {
-                                info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-                            }
-                        }
-                        KeyAction::CloseWindow => {
-                            if let Some(d) = self
-                                .workspaces
-                                .current()
-                                .window_under(self.pointer_location)
-                            {
-                                d.0.toplevel().send_close()
-                            }
-                        }
-                    }
+                    self.handle_action(action);
                 };
             }
             InputEvent::PointerMotion { event } => {
@@ -218,10 +197,50 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             self.set_input_focus(d.0);
         }
     }
-}
 
-enum KeyAction {
-    Quit,
-    Spawn(String),
-    CloseWindow,
+    pub fn handle_action(&mut self, action: Action) {
+        match action {
+            Action::Quit => self.loop_signal.stop(),
+            Action::Debug => todo!(),
+            Action::Close => {
+                if let Some(d) = self
+                    .workspaces
+                    .current()
+                    .window_under(self.pointer_location)
+                {
+                    d.0.toplevel().send_close()
+                }
+            }
+            Action::Workspace(id) => {
+                self.workspaces.activate(id);
+                self.set_input_focus_auto();
+            }
+            Action::MoveWindow(id) => {
+                let window = self
+                    .workspaces
+                    .current()
+                    .window_under(self.pointer_location)
+                    .map(|d| d.0.clone());
+
+                if let Some(window) = window {
+                    self.workspaces.move_window_to_workspace(&window, id);
+                }
+            }
+            Action::MoveAndSwitch(u8) => {
+                self.handle_action(Action::MoveWindow(u8));
+                self.handle_action(Action::Workspace(u8));
+            }
+            Action::ToggleWindowFloating => todo!(),
+            Action::Spawn(command) => {
+                if let Err(err) = std::process::Command::new("/bin/sh")
+                    .arg("-c")
+                    .arg(command.clone())
+                    .spawn()
+                {
+                    info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+                }
+            }
+            Action::VTSwitch(_) => todo!(),
+        }
+    }
 }
