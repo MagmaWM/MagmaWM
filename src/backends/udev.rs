@@ -12,6 +12,7 @@ use smithay::{
         egl::{EGLDevice, EGLDisplay},
         libinput::{LibinputInputBackend, LibinputSessionInterface},
         renderer::{
+            self,
             element::{
                 surface::WaylandSurfaceRenderElement,
                 texture::{TextureBuffer, TextureRenderElement},
@@ -19,6 +20,7 @@ use smithay::{
             },
             gles::{GlesRenderer, GlesTexture},
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
+            Bind, BufferType, ExportMem, Offscreen,
         },
         session::{libseat::LibSeatSession, Session},
         udev::{self, UdevBackend, UdevEvent},
@@ -37,10 +39,14 @@ use smithay::{
         },
         input::Libinput,
         nix::fcntl::OFlag,
-        wayland_server::{backend::GlobalId, Display},
+        wayland_server::{
+            backend::GlobalId,
+            protocol::{wl_output::WlOutput, wl_shm},
+            Display,
+        },
     },
-    utils::{DeviceFd, Scale, Size, Transform},
-    wayland::shell::wlr_layer::Layer,
+    utils::{DeviceFd, Point, Rectangle, Scale, Size, Transform},
+    wayland::{shell::wlr_layer::Layer, shm},
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -49,6 +55,8 @@ use smithay_drm_extras::{
 use tracing::{error, info, trace, warn};
 
 use crate::{
+    delegate_screencopy_manager,
+    protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::render::CustomRenderElements,
 };
@@ -91,7 +99,7 @@ pub struct Surface {
     _render_node: DrmNode,
     global: GlobalId,
     compositor: GbmDrmCompositor,
-    _output: Output,
+    output: Output,
     pointer_texture: TextureBuffer<MultiTexture>,
 }
 
@@ -131,7 +139,7 @@ pub fn init_udev() {
         &mut display,
         data,
     );
-
+    ScreencopyManagerState::new::<MagmaState<UdevData>>(&display.handle());
     /*
      * Add input source
      */
@@ -353,7 +361,7 @@ impl MagmaState<UdevData> {
                 let device = self.backend_data.devices.get_mut(&node).unwrap();
                 let surface = device.surfaces.get_mut(&crtc).unwrap();
                 surface.compositor.frame_submitted().ok();
-                self.render(node, crtc).ok();
+                self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
         }
@@ -488,7 +496,7 @@ impl MagmaState<UdevData> {
                     SUPPORTED_FORMATS,
                     render_formats,
                     device.drm.cursor_size(),
-                    Some(device.gbm.clone()),
+                    None,
                 )
                 .unwrap();
 
@@ -509,7 +517,7 @@ impl MagmaState<UdevData> {
                     _render_node: device.render_node,
                     global,
                     compositor,
-                    _output: output.clone(),
+                    output: output.clone(),
                     pointer_texture,
                 };
 
@@ -520,7 +528,7 @@ impl MagmaState<UdevData> {
 
                 device.surfaces.insert(crtc, surface);
 
-                self.render(node, crtc).ok();
+                self.render(node, crtc, None).ok();
             }
             DrmScanEvent::Disconnected {
                 crtc: Some(crtc), ..
@@ -533,7 +541,12 @@ impl MagmaState<UdevData> {
 }
 
 impl MagmaState<UdevData> {
-    pub fn render(&mut self, node: DrmNode, crtc: crtc::Handle) -> Result<bool, SwapBuffersError> {
+    pub fn render(
+        &mut self,
+        node: DrmNode,
+        crtc: crtc::Handle,
+        screencopy: Option<Screencopy>,
+    ) -> Result<bool, SwapBuffersError> {
         let device = self.backend_data.devices.get_mut(&node).unwrap();
         let surface = device.surfaces.get_mut(&crtc).unwrap();
         let mut renderer = self
@@ -614,6 +627,75 @@ impl MagmaState<UdevData> {
             .render_frame::<_, _, GlesTexture>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
             .unwrap();
 
+        // Copy framebuffer for screencopy.
+        if let Some(mut screencopy) = screencopy {
+            // Mark entire buffer as damaged.
+            let region = screencopy.region();
+            if let Some(damage) = frame_result.damage.clone() {
+                screencopy.damage(&damage);
+            }
+
+            let shm_buffer = screencopy.buffer();
+
+            // Ignore unknown buffer types.
+            let buffer_type = renderer::buffer_type(shm_buffer);
+            if !matches!(buffer_type, Some(BufferType::Shm)) {
+                warn!("Unsupported buffer type: {:?}", buffer_type);
+            } else {
+                // Create and bind an offscreen render buffer.
+                let buffer_dimensions = renderer::buffer_dimensions(shm_buffer).unwrap();
+                let offscreen_buffer = Offscreen::<GlesTexture>::create_buffer(
+                    &mut renderer,
+                    Fourcc::Argb8888,
+                    buffer_dimensions,
+                )
+                .unwrap();
+                renderer.bind(offscreen_buffer).unwrap();
+
+                let output = &screencopy.output;
+                let scale = output.current_scale().fractional_scale();
+                let output_size = output.current_mode().unwrap().size;
+                let transform = output.current_transform();
+
+                // Calculate drawing area after output transform.
+                let damage = transform.transform_rect_in(region, &output_size);
+
+                frame_result
+                    .blit_frame_result(damage.size, transform, scale, &mut renderer, [damage], [])
+                    .unwrap();
+
+                let region = Rectangle {
+                    loc: Point::from((region.loc.x, region.loc.y)),
+                    size: Size::from((region.size.w, region.size.h)),
+                };
+                let mapping = renderer.copy_framebuffer(region, Fourcc::Argb8888).unwrap();
+                let buffer = renderer.map_texture(&mapping);
+                // shm_buffer.
+                // Copy offscreen buffer's content to the SHM buffer.
+                shm::with_buffer_contents_mut(
+                    shm_buffer,
+                    |shm_buffer_ptr, shm_len, buffer_data| {
+                        // Ensure SHM buffer is in an acceptable format.
+                        if dbg!(buffer_data.format) != wl_shm::Format::Argb8888
+                            || buffer_data.stride != region.size.w * 4
+                            || buffer_data.height != region.size.h
+                            || shm_len as i32 != buffer_data.stride * buffer_data.height
+                        {
+                            error!("Invalid buffer format");
+                            return;
+                        }
+
+                        // Copy the offscreen buffer's content to the SHM buffer.
+                        unsafe { shm_buffer_ptr.copy_from(buffer.unwrap().as_ptr(), shm_len) };
+                    },
+                )
+                .unwrap();
+            }
+
+            // Mark screencopy frame as successful.
+            screencopy.submit();
+        }
+
         let rendered = frame_result.damage.is_some();
         let mut result = Ok(rendered);
         if rendered {
@@ -666,7 +748,7 @@ impl MagmaState<UdevData> {
             let timer = Timer::from_duration(reschedule_duration);
             self.loop_handle
                 .insert_source(timer, move |_, _, data| {
-                    data.state.render(node, crtc).ok();
+                    data.state.render(node, crtc, None).ok();
                     TimeoutAction::Drop
                 })
                 .expect("failed to schedule frame timer");
@@ -683,3 +765,22 @@ impl MagmaState<UdevData> {
         result
     }
 }
+
+impl ScreencopyHandler for MagmaState<UdevData> {
+    fn output(&mut self, output: &WlOutput) -> &Output {
+        self.workspaces.outputs().find(|o| o.owns(output)).unwrap()
+    }
+
+    fn frame(&mut self, frame: Screencopy) {
+        for (node, device) in &self.backend_data.devices {
+            for (crtc, surface) in &device.surfaces {
+                if surface.output == frame.output {
+                    self.render(*node, *crtc, Some(frame)).unwrap();
+                    return;
+                }
+            }
+        }
+    }
+}
+
+delegate_screencopy_manager!(MagmaState<UdevData>);
