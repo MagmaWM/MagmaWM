@@ -661,7 +661,6 @@ impl MagmaState<UdevData> {
         let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
             .compositor
             .render_frame::<_, _, GlesTexture>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
-            .map(|r| r)
             .map_err(|err| match err {
                 smithay::backend::drm::compositor::RenderFrameError::PrepareFrame(err) => {
                     err.into()
