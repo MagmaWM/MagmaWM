@@ -5,16 +5,16 @@ use smithay::{
     desktop::{layer_map_for_output, LayerSurface},
     input::{SeatHandler, SeatState},
     output::Output,
-    reexports::wayland_server::protocol::{wl_output::WlOutput, wl_surface::WlSurface},
+    reexports::wayland_server::{protocol::{wl_output::WlOutput, wl_surface::WlSurface}, Resource},
     wayland::{
         buffer::BufferHandler,
         compositor::{get_parent, is_sync_subsurface, CompositorHandler, CompositorState},
-        data_device::{ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler},
+        data_device::{ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler, set_data_device_focus},
         shell::wlr_layer::{
             Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
         },
-        shm::{ShmHandler, ShmState},
-    },
+        shm::{ShmHandler, ShmState}, seat::WaylandFocus, primary_selection::{set_primary_focus, PrimarySelectionHandler},
+    }, delegate_primary_selection,
 };
 
 use crate::{
@@ -82,11 +82,36 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
         _image: smithay::input::pointer::CursorImageStatus,
     ) {
     }
-    fn focus_changed(
-        &mut self,
-        _seat: &smithay::input::Seat<Self>,
-        _focused: Option<&FocusTarget>,
-    ) {
+    fn focus_changed(&mut self, seat: &smithay::input::Seat<Self>, focused: Option<&FocusTarget>) {
+        let dh = &self.dh;
+
+        let focus = focused
+            .and_then(WaylandFocus::wl_surface)
+            .and_then(|s| dh.get_client(s.id()).ok());
+        set_data_device_focus(dh, seat, focus.clone());
+        set_primary_focus(dh, seat, focus);
+
+        if let Some(focus_target) = focused {
+            match focus_target {
+                FocusTarget::Window(w) => {
+                    for window in self.workspaces.all_windows(){
+                        if window.eq(w){
+                            window.set_activated(true);
+                        }else{
+                            window.set_activated(false);
+                        }
+                        window.toplevel().send_configure();
+                    }
+                },
+                FocusTarget::LayerSurface(_) => {
+                    for window in self.workspaces.all_windows() {
+                    window.set_activated(false);
+                    window.toplevel().send_configure();
+                    }
+                },
+                FocusTarget::Popup(_) => {},
+            };
+        }
     }
 }
 
@@ -107,6 +132,13 @@ impl<BackendData: Backend> ServerDndGrabHandler for MagmaState<BackendData> {}
 
 delegate_data_device!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
+impl<BackendData:Backend> PrimarySelectionHandler for MagmaState<BackendData> {
+    fn primary_selection_state(&self) -> &smithay::wayland::primary_selection::PrimarySelectionState {
+        &self.primary_selection_state
+    }
+}
+
+delegate_primary_selection!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 //
 // Wl Output & Xdg Output
 //
