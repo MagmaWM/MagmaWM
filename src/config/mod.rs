@@ -2,6 +2,7 @@ use std::{collections::HashMap, fs::OpenOptions};
 
 use self::types::{deserialize_KeyModifiers, deserialize_Keysym, XkbConfig};
 use serde::Deserialize;
+use smithay::utils::{Physical, Size};
 
 mod types;
 #[derive(Debug, Deserialize)]
@@ -17,6 +18,22 @@ pub struct Config {
 
     #[serde(default = "default_autostart")]
     pub autostart: Vec<String>,
+
+    #[serde(default = "default_outputs")]
+    pub outputs: HashMap<String, OutputConfig>,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct OutputConfig((i32, i32), Option<u32>);
+
+impl OutputConfig {
+    pub fn mode_size(&self) -> Size<i32, Physical> {
+        self.0.into()
+    }
+
+    pub fn mode_refresh(&self) -> u32 {
+        self.1.unwrap_or(60_000)
+    }
 }
 
 pub fn load_config() -> Config {
@@ -51,6 +68,10 @@ fn default_xkb() -> XkbConfig {
 
 fn default_autostart() -> Vec<String> {
     vec![]
+}
+
+fn default_outputs() -> HashMap<String, OutputConfig> {
+    HashMap::new()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
