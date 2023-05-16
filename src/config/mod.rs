@@ -14,6 +14,9 @@ pub struct Config {
 
     #[serde(default = "default_xkb")]
     pub xkb: XkbConfig,
+
+    #[serde(default = "default_autostart")]
+    pub autostart: Vec<String>,
 }
 
 pub fn load_config() -> Config {
@@ -44,6 +47,10 @@ fn default_gaps() -> (i32, i32) {
 
 fn default_xkb() -> XkbConfig {
     XkbConfig::default()
+}
+
+fn default_autostart() -> Vec<String> {
+    vec![]
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize)]

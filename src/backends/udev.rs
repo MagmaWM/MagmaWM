@@ -49,7 +49,7 @@ use smithay_drm_extras::{
 use tracing::{error, info, trace, warn};
 
 use crate::{
-    state::{Backend, CalloopData, MagmaState},
+    state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::render::CustomRenderElements,
 };
 
@@ -185,9 +185,16 @@ pub fn init_udev() {
     let mut calloopdata = CalloopData { state, display };
 
     std::env::set_var("WAYLAND_DISPLAY", &calloopdata.state.socket_name);
-    std::process::Command::new("alacritty")
+
+    for command in &CONFIG.autostart {
+        if let Err(err) = std::process::Command::new("/bin/sh")
+        .arg("-c")
+        .arg(command)
         .spawn()
-        .expect("this should work");
+            {
+                info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+            }
+    }
 
     event_loop
         .run(None, &mut calloopdata, move |data| {
