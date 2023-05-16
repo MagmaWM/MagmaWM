@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::OpenOptions};
+use std::{collections::HashMap, fs::OpenOptions, fs::File, path::PathBuf, io::Write, io};
 
 use self::types::{deserialize_KeyModifiers, deserialize_Keysym, XkbConfig};
 use serde::Deserialize;
@@ -36,6 +36,47 @@ impl OutputConfig {
     }
 }
 
+pub fn generate_config() -> PathBuf {
+    println!("Would you like to generate a config file? [y/N]");
+    let mut input = String::new();
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read input");
+
+    if input.trim() == "y" {
+        println!("OK, generating config...");
+        let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
+        let file_path = xdg.place_data_file("magamawm/config.ron").expect("Failed to get file path");
+        let mut file = match File::create(file_path.clone()) {
+            Ok(file) => file,
+            Err(err) => {
+                println!("Failed to create file: {}", err);
+                panic!("Couldnt create config file")
+            }
+        };
+        file.write_all(b"(
+            workspaces: 3,
+            keybindings: {
+                (modifiers: [Ctrl], key: \"Return\"): Spawn(\"alacritty\"),
+                (modifiers: [Ctrl], key: \"q\"): Quit,
+                (modifiers: [Ctrl], key: \"w\"): Close,
+                (modifiers: [Ctrl], key: \"1\"): Workspace(0),
+                (modifiers: [Ctrl], key: \"2\"): Workspace(1),
+                (modifiers: [Ctrl], key: \"3\"): Workspace(2),
+            },
+        )").expect("ERROR: Couldnt write to file");
+        return file_path;
+    }
+    if input.trim() == "n" {
+        println!("OK, exitting...");
+        panic!("No config file found");
+    }
+    else {
+        println!("ERROR: Unknown input, try again");
+        panic!();
+    }
+}
+
 pub fn load_config() -> Config {
     let xdg = xdg::BaseDirectories::new().ok();
     let locations = if let Some(base) = xdg {
@@ -55,7 +96,9 @@ pub fn load_config() -> Config {
                 .expect("Malformed config file");
         }
     }
-    panic!("No config file found")
+    dbg!("No config file found in default locations, prompting generation");
+    return ron::de::from_reader(OpenOptions::new().read(true).open(generate_config()).unwrap())
+        .expect("Malformed config file");
 }
 
 fn default_gaps() -> (i32, i32) {
