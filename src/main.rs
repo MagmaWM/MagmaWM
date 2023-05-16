@@ -8,6 +8,7 @@ use chrono::Local;
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 mod backends;
+mod config;
 mod handlers;
 mod state;
 mod utils;

@@ -3,12 +3,13 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{
-            damage::OutputDamageTracker, element::surface::WaylandSurfaceRenderElement,
+            damage::OutputDamageTracker,
+            element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
             gles::GlesRenderer,
         },
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
-    desktop::space::SpaceElement,
+    desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::{
         calloop::{
@@ -17,8 +18,10 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Rectangle, Transform},
+    utils::{Rectangle, Scale, Transform},
+    wayland::shell::wlr_layer::Layer,
 };
+use tracing::info;
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlesRenderer>,
@@ -30,7 +33,7 @@ impl Backend for WinitData {
         "winit".to_string()
     }
 }
-use crate::state::{Backend, CalloopData, MagmaState};
+use crate::state::{Backend, CalloopData, MagmaState, CONFIG};
 
 pub fn init_winit() {
     let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
@@ -98,9 +101,15 @@ pub fn init_winit() {
         })
         .unwrap();
 
-    std::process::Command::new("alacritty")
-        .spawn()
-        .expect("this should work");
+    for command in &CONFIG.autostart {
+        if let Err(err) = std::process::Command::new("/bin/sh")
+            .arg("-c")
+            .arg(command)
+            .spawn()
+        {
+            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
+        }
+    }
 
     event_loop
         .run(None, &mut data, move |_| {
@@ -154,8 +163,49 @@ pub fn winit_dispatch(
 
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
+    let layer_map = layer_map_for_output(output);
+    let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
+        .layers()
+        .rev()
+        .partition(|s| matches!(s.layer(), Layer::Background | Layer::Bottom));
+
+    renderelements.extend(
+        upper
+            .into_iter()
+            .filter_map(|surface| {
+                layer_map
+                    .layer_geometry(surface)
+                    .map(|geo| (geo.loc, surface))
+            })
+            .flat_map(|(loc, surface)| {
+                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                    surface,
+                    winitdata.backend.renderer(),
+                    loc.to_physical_precise_round(1),
+                    Scale::from(1.0),
+                )
+            }),
+    );
 
     renderelements.extend(workspace.render_elements(winitdata.backend.renderer()));
+
+    renderelements.extend(
+        lower
+            .into_iter()
+            .filter_map(|surface| {
+                layer_map
+                    .layer_geometry(surface)
+                    .map(|geo| (geo.loc, surface))
+            })
+            .flat_map(|(loc, surface)| {
+                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                    surface,
+                    winitdata.backend.renderer(),
+                    loc.to_physical_precise_round(1),
+                    Scale::from(1.0),
+                )
+            }),
+    );
 
     winitdata
         .damage_tracker
@@ -180,4 +230,5 @@ pub fn winit_dispatch(
 
     workspace.windows().for_each(|e| e.refresh());
     display.flush_clients().unwrap();
+    state.popup_manager.cleanup();
 }

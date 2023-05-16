@@ -1,7 +1,10 @@
 use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
 
+use once_cell::sync::Lazy;
 use smithay::{
-    desktop::Window,
+    desktop::{
+        layer_map_for_output, {PopupManager, Window},
+    },
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -15,13 +18,19 @@ use smithay::{
         compositor::CompositorState,
         data_device::DataDeviceState,
         output::OutputManagerState,
-        shell::xdg::{decoration::XdgDecorationState, XdgShellState},
+        primary_selection::PrimarySelectionState,
+        shell::{
+            wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
+            xdg::{decoration::XdgDecorationState, XdgShellState},
+        },
         shm::ShmState,
         socket::ListeningSocketSource,
     },
 };
+use tracing::warn;
 
-use crate::utils::workspace::Workspaces;
+use crate::config::{load_config, Config};
+use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
@@ -31,6 +40,8 @@ pub struct CalloopData<BackendData: Backend + 'static> {
 pub trait Backend {
     fn seat_name(&self) -> String;
 }
+
+pub static CONFIG: Lazy<Config> = Lazy::new(load_config);
 
 pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,
@@ -46,7 +57,10 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub shm_state: ShmState,
     pub output_manager_state: OutputManagerState,
     pub data_device_state: DataDeviceState,
+    pub primary_selection_state: PrimarySelectionState,
     pub seat_state: SeatState<MagmaState<BackendData>>,
+    pub layer_shell_state: WlrLayerShellState,
+    pub popup_manager: PopupManager,
 
     pub seat: Seat<Self>,
     pub seat_name: String,
@@ -74,13 +88,23 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let output_manager_state = OutputManagerState::new_with_xdg_output::<Self>(&dh);
         let mut seat_state = SeatState::new();
         let data_device_state = DataDeviceState::new::<Self>(&dh);
+        let primary_selection_state = PrimarySelectionState::new::<Self>(&dh);
         let seat_name = backend_data.seat_name();
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
+        let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
 
-        seat.add_keyboard(XkbConfig::default(), 200, 25).unwrap();
+        let conf = CONFIG.xkb.clone();
+        if let Err(err) = seat.add_keyboard((&conf).into(), 200, 25) {
+            warn!(
+                ?err,
+                "Failed to load provided xkb config. Trying default...",
+            );
+            seat.add_keyboard(XkbConfig::default(), 200, 25)
+                .expect("Failed to load xkb configuration files");
+        }
         seat.add_pointer();
 
-        let workspaces = Workspaces::new(1);
+        let workspaces = Workspaces::new(CONFIG.workspaces);
 
         let socket_name = Self::init_wayland_listener(&mut loop_handle, display);
 
@@ -97,8 +121,11 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             loop_signal,
             shm_state,
             output_manager_state,
+            popup_manager: PopupManager::default(),
             seat_state,
             data_device_state,
+            primary_selection_state,
+            layer_shell_state,
             seat,
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
@@ -152,6 +179,33 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             .current()
             .window_under(pos)
             .map(|(w, p)| (w.clone(), p))
+    }
+    pub fn surface_under(&self) -> Option<(FocusTarget, Point<i32, Logical>)> {
+        let pos = self.pointer_location;
+        let output = self.workspaces.current().outputs().find(|o| {
+            let geometry = self.workspaces.current().output_geometry(o).unwrap();
+            geometry.contains(pos.to_i32_round())
+        })?;
+        let output_geo = self.workspaces.current().output_geometry(output).unwrap();
+        let layers = layer_map_for_output(output);
+
+        let mut under = None;
+        if let Some(layer) = layers
+            .layer_under(WlrLayer::Overlay, pos)
+            .or_else(|| layers.layer_under(WlrLayer::Top, pos))
+        {
+            let layer_loc = layers.layer_geometry(layer).unwrap().loc;
+            under = Some((layer.clone().into(), output_geo.loc + layer_loc))
+        } else if let Some((window, location)) = self.workspaces.current().window_under(pos) {
+            under = Some((window.clone().into(), location));
+        } else if let Some(layer) = layers
+            .layer_under(WlrLayer::Bottom, pos)
+            .or_else(|| layers.layer_under(WlrLayer::Background, pos))
+        {
+            let layer_loc = layers.layer_geometry(layer).unwrap().loc;
+            under = Some((layer.clone().into(), output_geo.loc + layer_loc));
+        };
+        under
     }
 }
 
