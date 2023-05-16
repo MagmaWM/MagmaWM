@@ -132,6 +132,7 @@ impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {
         let layer_surface = LayerSurface::new(surface, namespace);
         map.map_layer(&layer_surface).unwrap();
         self.set_input_focus(FocusTarget::LayerSurface(layer_surface));
+        drop(map);
         for workspace in self.workspaces.iter() {
             bsp_update_layout(workspace);
         }
