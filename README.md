@@ -29,30 +29,35 @@ Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 - [ ] Working Popups
 - [x] Can be launched from TTY
 
-## Contributing
+## Build
 
-To contribute your own code, start by forking this project and installing the necessary dependencies listed below.
+### 1. Dependencies
+You will need to install MagmaWM's dependencies with your package manager of choice.
 
-After installing the dependencies, you can build the project with `cargo build --release`.
-
-NOTE: A few packages will be downloaded and installed, so the first time may take significantly longer than subsequent builds.
-
-The binary will be created in `./target/release/`, named `magmawm`.
-
-> 💡 You can also use `cargo run --release` to run the project!
-
-You can now edit the source code and rebuild the project.
-Test your changes by running the `magmawm` file.
-
-When you have finished making all of your changes, commit them using [Git](https://git-scm.com/) and create a pull request.
-
-## Dependencies
-Depedencies needed to compile MagmaWM
-### Ubuntu/Debian
+#### Debian and derivatives (Ubuntu, Linux Mint, MX Linux, etc.)
 ```bash
-sudo apt install libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
+# apt install libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
+```
+#### Arch and derivatives (EndeavourOS, Garuda, etc.)
+Manjaro is **not** supported.
+```bash
+# pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib
+```
+#### openSUSE Tumbleweed
+```bash
+# zypper in systemd-devel libgbm-devel libxkbcommon-devel Mesa-libEGL1 wayland-devel libinput-devel libdbus-glib-1-3 seatd-devel
 ```
 
+### 2. Compilation
+Clone the git repo and build MagmaWM by running the following command:
+```bash
+$ cargo build --release
+```
+The binary will be created in `./target/release/magmawm`.
+You can also use `cargo run --release` to run the project.
 ## Install
-**MagmaWM** is still under devlopment and can't be installed yet.
-
+**MagmaWM** is still under heavy development and installation is not recommended.
+If you really want to, run the following command to install MagmaWM: 
+```bash
+cargo install --path .
+```
