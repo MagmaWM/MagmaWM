@@ -93,7 +93,7 @@ pub struct Surface {
     _render_node: DrmNode,
     global: GlobalId,
     compositor: GbmDrmCompositor,
-    _output: Output,
+    output: Output,
     pointer_texture: TextureBuffer<MultiTexture>,
 }
 
@@ -384,6 +384,9 @@ impl MagmaState<UdevData> {
             for surface in device.surfaces.values() {
                 self.dh
                     .disable_global::<MagmaState<UdevData>>(surface.global.clone());
+                for workspace in self.workspaces.iter() {
+                    workspace.remove_output(&surface.output)
+                }
             }
         }
     }
@@ -547,7 +550,7 @@ impl MagmaState<UdevData> {
                     Fourcc::Abgr8888,
                     (64, 64),
                     false,
-                    1,
+                    2,
                     Transform::Normal,
                     None,
                 )
@@ -558,12 +561,11 @@ impl MagmaState<UdevData> {
                     _render_node: device.render_node,
                     global,
                     compositor,
-                    _output: output.clone(),
+                    output: output.clone(),
                     pointer_texture,
                 };
 
                 for workspace in self.workspaces.iter() {
-                    workspace.remove_outputs();
                     workspace.add_output(output.clone())
                 }
 
