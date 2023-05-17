@@ -5,6 +5,7 @@ use smithay::{
     desktop::layer_map_for_output,
     utils::{Logical, Physical, Point, Rectangle, Size},
 };
+use tracing::debug;
 
 use super::{
     binarytree::{BinaryTree, HorizontalOrVertical},
@@ -63,7 +64,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
             }
         }
     }
-    dbg!(&workspace.layout_tree);
+    debug!("{:#?}", workspace.layout_tree);
     for magmawindow in workspace.magmawindows() {
         let xdg_toplevel = magmawindow.window.toplevel();
         xdg_toplevel.with_pending_state(|state| {
