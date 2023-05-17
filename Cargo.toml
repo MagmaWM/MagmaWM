@@ -14,6 +14,7 @@ ron = "0.8"
 serde = { version = "1", features = ["derive"] }
 xdg = "^2.1"
 once_cell = "1.17.1"
+magma-ipc = { path = "./magma-ipc" }
 
 [dependencies.smithay]
 git = "https://github.com/Smithay/smithay.git"
