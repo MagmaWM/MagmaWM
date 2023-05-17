@@ -10,6 +10,7 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 mod backends;
 mod config;
 mod handlers;
+mod protocols;
 mod state;
 mod utils;
 
