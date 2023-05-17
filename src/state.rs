@@ -29,8 +29,9 @@ use smithay::{
 };
 use tracing::warn;
 
-use crate::config::{load_config, Config};
+use crate::{config::{load_config, Config}, delegate_magma_ipc};
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
+use crate::ipc::{MagmaIpcManager, MagmaIpcHandler};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
@@ -68,6 +69,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
 
     pub workspaces: Workspaces,
     pub pointer_location: Point<f64, Logical>,
+    pub ipc_manager: MagmaIpcManager,
 }
 
 impl<BackendData: Backend> MagmaState<BackendData> {
@@ -92,6 +94,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         let seat_name = backend_data.seat_name();
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
         let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
+        let ipc_manager = MagmaIpcManager::new::<Self>(&dh);
 
         let conf = CONFIG.xkb.clone();
         if let Err(err) = seat.add_keyboard((&conf).into(), 200, 25) {
@@ -129,6 +132,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             seat,
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
+            ipc_manager,
         }
     }
     fn init_wayland_listener(

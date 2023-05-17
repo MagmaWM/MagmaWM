@@ -26,7 +26,7 @@ use smithay::{
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::{focus::FocusTarget, tiling::bsp_update_layout},
+    utils::{focus::FocusTarget, tiling::bsp_update_layout}, ipc::generated::magma_ipc,
 };
 
 pub mod input;

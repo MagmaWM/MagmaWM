@@ -698,6 +698,8 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "wayland-backend",
+ "wayland-scanner 0.30.0",
  "xdg",
 ]
 
