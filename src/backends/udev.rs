@@ -343,6 +343,9 @@ impl MagmaState<UdevData> {
             for surface in device.surfaces.values() {
                 self.dh
                     .disable_global::<MagmaState<UdevData>>(surface.global.clone());
+                for workspace in self.workspaces.iter() {
+                    workspace.remove_output(&surface.output)
+                }
             }
         }
     }
@@ -522,7 +525,6 @@ impl MagmaState<UdevData> {
                 };
 
                 for workspace in self.workspaces.iter() {
-                    workspace.remove_outputs();
                     workspace.add_output(output.clone())
                 }
 
