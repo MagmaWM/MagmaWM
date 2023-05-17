@@ -198,7 +198,7 @@ pub fn init_udev() {
                             // otherwise
                             surface.compositor.reset_buffers();
                             data.state.loop_handle.insert_idle(move |data| {
-                                data.state.render(node, crtc).unwrap();
+                                data.state.render(node, crtc).ok();
                             });
                         }
                     }
