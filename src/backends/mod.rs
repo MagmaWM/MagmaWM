@@ -13,7 +13,6 @@ pub fn init_backend_from_name(name: &str) {
         }
         unknown => {
             tracing::error!("Attempted to start unknown backend: {}", unknown);
-            return;
         }
     }
 }
