@@ -559,18 +559,24 @@ impl MagmaState<UdevData> {
         let output = self.workspaces.current().outputs().next().unwrap();
 
         let mut renderelements: Vec<CustomRenderElements<MultiRenderer<_, _>>> = vec![];
-
-        renderelements.append(&mut vec![
-            CustomRenderElements::<MultiRenderer<_, _>>::from(
-                TextureRenderElement::from_texture_buffer(
-                    self.pointer_location.to_physical(Scale::from(1.0)),
-                    &surface.pointer_texture,
-                    None,
-                    None,
-                    None,
+        let render_cursor = if let Some(screencopy) = &screencopy {
+            screencopy.overlay_cursor
+        } else {
+            true
+        };
+        if render_cursor {
+            renderelements.append(&mut vec![
+                CustomRenderElements::<MultiRenderer<_, _>>::from(
+                    TextureRenderElement::from_texture_buffer(
+                        self.pointer_location.to_physical(Scale::from(1.0)),
+                        &surface.pointer_texture,
+                        None,
+                        None,
+                        None,
+                    ),
                 ),
-            ),
-        ]);
+            ]);
+        }
 
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
