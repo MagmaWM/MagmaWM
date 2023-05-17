@@ -47,6 +47,7 @@ where
             region: data.rect,
             submitted: false,
             output: data.output.clone(),
+            overlay_cursor: data.overlay_cursor,
         });
     }
 }
@@ -59,6 +60,7 @@ pub struct Screencopy {
     buffer: WlBuffer,
     submitted: bool,
     pub output: Output,
+    pub overlay_cursor: bool,
 }
 
 impl Drop for Screencopy {
