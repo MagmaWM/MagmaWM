@@ -18,8 +18,7 @@ pub fn init_backend_from_name(name: &str) {
 }
 
 pub fn init_backend_auto() {
-    if env::var("WAYLAND_DISPLAY").is_ok() ||
-      env::var("DISPLAY").is_ok() {
+    if env::var("WAYLAND_DISPLAY").is_ok() || env::var("DISPLAY").is_ok() {
         init_backend_from_name("winit");
     } else {
         init_backend_from_name("udev");
