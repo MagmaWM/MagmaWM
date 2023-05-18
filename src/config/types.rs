@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use smithay::input::keyboard::{
     keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
 };
@@ -82,7 +82,7 @@ impl PartialEq<ModifiersState> for KeyModifiers {
     }
 }
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize, Default, Serialize)]
 pub struct XkbConfig {
     pub rules: String,
     pub model: String,
