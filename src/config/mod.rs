@@ -1,11 +1,12 @@
-use std::{collections::HashMap, fs::OpenOptions, fs::File, path::PathBuf, io::Write, io};
+use std::{collections::HashMap, fs::File, fs::OpenOptions, io, io::Write, path::PathBuf};
 
 use self::types::{deserialize_KeyModifiers, deserialize_Keysym, XkbConfig};
-use serde::Deserialize;
+use ron::ser::PrettyConfig;
+use serde::{Deserialize, Serialize};
 use smithay::utils::{Physical, Size};
 
 mod types;
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub workspaces: u8,
     pub keybindings: HashMap<KeyPattern, Action>,
@@ -23,7 +24,7 @@ pub struct Config {
     pub outputs: HashMap<String, OutputConfig>,
 }
 
-#[derive(Debug, Deserialize, Clone)]
+#[derive(Debug, Deserialize, Clone, Serialize)]
 pub struct OutputConfig((i32, i32), Option<u32>);
 
 impl OutputConfig {
@@ -46,7 +47,9 @@ pub fn generate_config() -> PathBuf {
     if input.trim() == "y" {
         println!("OK, generating config...");
         let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
-        let file_path = xdg.place_data_file("magamawm/config.ron").expect("Failed to get file path");
+        let file_path = xdg
+            .place_data_file("magamawm/config.ron")
+            .expect("Failed to get file path");
         let mut file = match File::create(file_path.clone()) {
             Ok(file) => file,
             Err(err) => {
@@ -54,24 +57,81 @@ pub fn generate_config() -> PathBuf {
                 panic!("Couldnt create config file")
             }
         };
-        file.write_all(b"(
-            workspaces: 3,
-            keybindings: {
-                (modifiers: [Ctrl], key: \"Return\"): Spawn(\"alacritty\"),
-                (modifiers: [Ctrl], key: \"q\"): Quit,
-                (modifiers: [Ctrl], key: \"w\"): Close,
-                (modifiers: [Ctrl], key: \"1\"): Workspace(0),
-                (modifiers: [Ctrl], key: \"2\"): Workspace(1),
-                (modifiers: [Ctrl], key: \"3\"): Workspace(2),
+
+        let mut keybinding_map = std::collections::HashMap::<KeyPattern, Action>::new();
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
             },
-        )").expect("ERROR: Couldnt write to file");
+            key: 0xff0d
+        }, Action::Spawn(String::from("alacritty")));
+
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
+            },
+            key: 0x0071
+        }, Action::Quit);
+
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
+            },
+            key: 0x0077 
+        }, Action::Close);
+
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
+            },
+            key: 0xffb1
+        }, Action::Workspace(1));
+
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
+            },
+            key: 0xffb2
+        }, Action::Workspace(2));
+
+        keybinding_map.insert(KeyPattern{
+            modifiers: KeyModifiers{
+                ctrl: true,
+                alt: false,
+                shift: false,
+                logo: false
+            },
+            key: 0xffb3
+        }, Action::Workspace(3));
+
+        
+        let default_config = Config { workspaces: 8, keybindings: keybinding_map, gaps: default_gaps(), xkb: default_xkb(), autostart:default_autostart(), outputs: default_outputs() };
+        let test_thing = ron::ser::to_string(&keybinding_map.clone()).unwrap();
+        file.write_all(
+            b"",
+        )
+        .expect("ERROR: Couldnt write to file");
         return file_path;
     }
     if input.trim() == "n" {
         println!("OK, exitting...");
         panic!("No config file found");
-    }
-    else {
+    } else {
         println!("ERROR: Unknown input, try again");
         panic!();
     }
@@ -97,8 +157,13 @@ pub fn load_config() -> Config {
         }
     }
     dbg!("No config file found in default locations, prompting generation");
-    return ron::de::from_reader(OpenOptions::new().read(true).open(generate_config()).unwrap())
-        .expect("Malformed config file");
+    return ron::de::from_reader(
+        OpenOptions::new()
+            .read(true)
+            .open(generate_config())
+            .unwrap(),
+    )
+    .expect("Malformed config file");
 }
 
 fn default_gaps() -> (i32, i32) {
@@ -125,7 +190,7 @@ pub enum KeyModifier {
     Super,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
 pub struct KeyModifiers {
     ctrl: bool,
     alt: bool,
@@ -135,7 +200,7 @@ pub struct KeyModifiers {
 
 /// Describtion of a key combination that might be
 /// handled by the compositor.
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyPattern {
     /// What modifiers are expected to be pressed alongside the key
@@ -146,7 +211,7 @@ pub struct KeyPattern {
     pub key: u32,
 }
 
-#[derive(Debug, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, PartialEq, Eq, Serialize)]
 pub enum Action {
     Quit,
     Debug,
