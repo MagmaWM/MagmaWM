@@ -84,14 +84,13 @@ fn main() {
         }
         Some(other) => {
             error!("Unknown backend: {}", other);
+            info!("Possible backends are:");
+            for line in POSSIBLE_BACKENDS {
+                println!("{}", line);
+            }
         }
         None => {
-            println!("USAGE: magma --backend");
-            println!();
-            println!("Possible backends are:");
-            for b in POSSIBLE_BACKENDS {
-                println!("\t{}", b);
-            }
+            backends::init_backend_auto();
         }
     }
 
