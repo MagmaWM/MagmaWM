@@ -32,7 +32,7 @@ impl OutputConfig {
     }
 
     pub fn mode_refresh(&self) -> u32 {
-        self.1.unwrap_or(60_000)
+        self.1.unwrap_or(60) * 1000
     }
 }
 
