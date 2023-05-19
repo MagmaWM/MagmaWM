@@ -1,13 +1,13 @@
-use serde::{Deserialize, Serialize};
+use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use smithay::input::keyboard::{
     keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
 };
 
 use super::{KeyModifier, KeyModifiers};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 #[serde(transparent)]
-pub struct KeyModifiersDef(Vec<KeyModifier>);
+pub struct KeyModifiersDef(pub Vec<KeyModifier>);
 
 impl From<KeyModifiersDef> for KeyModifiers {
     fn from(src: KeyModifiersDef) -> Self {
@@ -32,6 +32,34 @@ where
     D: serde::Deserializer<'de>,
 {
     KeyModifiersDef::deserialize(deserializer).map(Into::into)
+}
+
+#[allow(non_snake_case)]
+pub fn serialize_KeyModifiers<S>(
+    key_modifiers: &KeyModifiers,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut modifiers = vec![];
+    if key_modifiers.logo {
+        modifiers.push(KeyModifier::Super);
+    }
+    if key_modifiers.shift {
+        modifiers.push(KeyModifier::Shift);
+    }
+    if key_modifiers.ctrl {
+        modifiers.push(KeyModifier::Ctrl);
+    }
+    if key_modifiers.alt {
+        modifiers.push(KeyModifier::Alt);
+    }
+    let mut seq = serializer.serialize_seq(Some(modifiers.len()))?;
+    for e in modifiers {
+        seq.serialize_element(&e)?;
+    }
+    seq.end()
 }
 
 #[allow(non_snake_case)]
@@ -60,6 +88,14 @@ where
         },
         x => Ok(x),
     }
+}
+
+#[allow(non_snake_case)]
+pub fn serialize_Keysym<S>(keysym: &u32, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&xkb::keysym_get_name(*keysym))
 }
 
 impl std::ops::AddAssign<KeyModifier> for KeyModifiers {
