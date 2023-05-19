@@ -1,13 +1,13 @@
 use smithay::{
-    backend::input::{
+    backend::{input::{
         self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent, KeyState,
         KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
-    },
+    }, libinput::LibinputInputBackend},
     input::{
         keyboard::{xkb, FilterResult},
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
-    utils::{Logical, Point, SERIAL_COUNTER},
+    utils::{Logical, Point, SERIAL_COUNTER}, reexports::input::Led,
 };
 use tracing::info;
 
@@ -19,9 +19,9 @@ use crate::{
 };
 
 impl MagmaState<UdevData> {
-    pub fn process_input_event_udev<I: InputBackend>(
+    pub fn process_input_event_udev(
         &mut self,
-        event: InputEvent<I>,
+        event: InputEvent<LibinputInputBackend>,
     ) -> Option<i32> {
         match event {
             InputEvent::Keyboard { event, .. } => {
@@ -35,6 +35,14 @@ impl MagmaState<UdevData> {
                     serial,
                     time,
                     |_, modifiers, handle| {
+                        let mut leds = Led::empty();
+                        if modifiers.caps_lock {
+                            leds.insert(Led::CAPSLOCK);
+                        }
+                        if modifiers.num_lock {
+                            leds.insert(Led::NUMLOCK);
+                        }
+                        event.device().led_update(leds);
                         for (binding, action) in CONFIG.keybindings.iter() {
                             if event.state() == KeyState::Pressed
                                 && binding.modifiers == *modifiers
