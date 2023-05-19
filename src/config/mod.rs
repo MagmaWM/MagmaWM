@@ -1,9 +1,17 @@
 use std::{collections::HashMap, fs::File, fs::OpenOptions, io, io::Write, path::PathBuf};
 
-use self::types::{deserialize_KeyModifiers, deserialize_Keysym, XkbConfig};
+use crate::config::types::KeyModifiersDef;
+
+use self::types::{
+    deserialize_KeyModifiers, deserialize_Keysym, serialize_KeyModifiers, serialize_Keysym,
+    XkbConfig,
+};
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
-use smithay::utils::{Physical, Size};
+use smithay::{
+    input::keyboard::xkb,
+    utils::{Physical, Size},
+};
 
 mod types;
 #[derive(Debug, Deserialize, Serialize)]
@@ -48,7 +56,7 @@ pub fn generate_config() -> PathBuf {
         println!("OK, generating config...");
         let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
         let file_path = xdg
-            .place_data_file("magamawm/config.ron")
+            .place_config_file("magamawm/config.ron")
             .expect("Failed to get file path");
         let mut file = match File::create(file_path.clone()) {
             Ok(file) => file,
@@ -59,76 +67,68 @@ pub fn generate_config() -> PathBuf {
         };
 
         let mut keybinding_map = std::collections::HashMap::<KeyPattern, Action>::new();
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+                key: xkb::KEY_Return,
             },
-            key: 0xff0d
-        }, Action::Spawn(String::from("alacritty")));
+            Action::Spawn(String::from("alacritty")),
+        );
 
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super, KeyModifier::Shift]).into(),
+                key: xkb::KEY_q,
             },
-            key: 0x0071
-        }, Action::Quit);
+            Action::Quit,
+        );
 
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+                key: xkb::KEY_w,
             },
-            key: 0x0077 
-        }, Action::Close);
+            Action::Close,
+        );
 
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+                key: xkb::KEY_1,
             },
-            key: 0xffb1
-        }, Action::Workspace(1));
+            Action::Workspace(1),
+        );
 
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+                key: xkb::KEY_2,
             },
-            key: 0xffb2
-        }, Action::Workspace(2));
+            Action::Workspace(2),
+        );
 
-        keybinding_map.insert(KeyPattern{
-            modifiers: KeyModifiers{
-                ctrl: true,
-                alt: false,
-                shift: false,
-                logo: false
+        keybinding_map.insert(
+            KeyPattern {
+                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+                key: xkb::KEY_3,
             },
-            key: 0xffb3
-        }, Action::Workspace(3));
+            Action::Workspace(3),
+        );
 
-        
-        let default_config = Config { workspaces: 8, keybindings: keybinding_map, gaps: default_gaps(), xkb: default_xkb(), autostart:default_autostart(), outputs: default_outputs() };
-        let test_thing = ron::ser::to_string(&keybinding_map.clone()).unwrap();
-        file.write_all(
-            b"",
-        )
-        .expect("ERROR: Couldnt write to file");
-        return file_path;
-    }
-    if input.trim() == "n" {
+        let default_config = Config {
+            workspaces: 3,
+            keybindings: keybinding_map,
+            gaps: default_gaps(),
+            xkb: default_xkb(),
+            autostart: default_autostart(),
+            outputs: default_outputs(),
+        };
+        let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
+        let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
+        file.write_all(ron.as_bytes())
+            .expect("ERROR: Couldnt write to file");
+        file_path
+    } else if input.trim() == "n" {
         println!("OK, exitting...");
         panic!("No config file found");
     } else {
@@ -163,7 +163,7 @@ pub fn load_config() -> Config {
             .open(generate_config())
             .unwrap(),
     )
-    .expect("Malformed config file");
+    .unwrap();
 }
 
 fn default_gaps() -> (i32, i32) {
@@ -182,7 +182,7 @@ fn default_outputs() -> HashMap<String, OutputConfig> {
     HashMap::new()
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum KeyModifier {
     Ctrl,
     Alt,
@@ -190,7 +190,7 @@ pub enum KeyModifier {
     Super,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct KeyModifiers {
     ctrl: bool,
     alt: bool,
@@ -205,9 +205,11 @@ pub struct KeyModifiers {
 pub struct KeyPattern {
     /// What modifiers are expected to be pressed alongside the key
     #[serde(deserialize_with = "deserialize_KeyModifiers")]
+    #[serde(serialize_with = "serialize_KeyModifiers")]
     pub modifiers: KeyModifiers,
     /// The actual key, that was pressed
     #[serde(deserialize_with = "deserialize_Keysym")]
+    #[serde(serialize_with = "serialize_Keysym")]
     pub key: u32,
 }
 
