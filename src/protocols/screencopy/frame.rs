@@ -108,4 +108,8 @@ impl Screencopy {
         // Mark frame as submitted to ensure destructor isn't run.
         self.submitted = true;
     }
+
+    pub fn failed(self) {
+        self.frame.failed();
+    }
 }
