@@ -12,6 +12,7 @@ use smithay::{
     input::keyboard::xkb,
     utils::{Physical, Size},
 };
+use tracing::info;
 
 mod types;
 #[derive(Debug, Deserialize, Serialize)]
@@ -128,12 +129,12 @@ pub fn generate_config() -> PathBuf {
         file.write_all(ron.as_bytes())
             .expect("ERROR: Couldnt write to file");
         file_path
-    } else if input.trim() == "n" {
+    } else if input.trim() == "n" || input.trim() == "" {
         println!("OK, exitting...");
-        panic!("No config file found");
+        std::process::exit(0);
     } else {
         println!("ERROR: Unknown input, try again");
-        panic!();
+        generate_config()
     }
 }
 
@@ -149,14 +150,14 @@ pub fn load_config() -> Config {
     };
 
     for path in locations {
-        dbg!("Trying config location: {}", path.display());
+        info!("Trying config location: {}", path.display());
         if path.exists() {
-            dbg!("Using config at {}", path.display());
+            info!("Using config at {}", path.display());
             return ron::de::from_reader(OpenOptions::new().read(true).open(path).unwrap())
                 .expect("Malformed config file");
         }
     }
-    dbg!("No config file found in default locations, prompting generation");
+    info!("No config file found in default locations, prompting generation");
     return ron::de::from_reader(
         OpenOptions::new()
             .read(true)

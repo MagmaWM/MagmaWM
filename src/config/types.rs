@@ -2,6 +2,7 @@ use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use smithay::input::keyboard::{
     keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
 };
+use tracing::warn;
 
 use super::{KeyModifier, KeyModifiers};
 
@@ -78,7 +79,7 @@ where
                 &"One of the keysym names of xkbcommon.h without the 'KEY_' prefix",
             )),
             x => {
-                dbg!(
+                warn!(
                     "Key-Binding '{}' only matched case insensitive for {:?}",
                     name,
                     xkb::keysym_get_name(x)
