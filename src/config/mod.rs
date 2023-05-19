@@ -50,7 +50,7 @@ pub fn generate_config() -> PathBuf {
     warn!("No config file found, generating one");
     let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
     let file_path = xdg
-        .place_config_file("magamawm/config.ron")
+        .place_config_file("magmawm/config.ron")
         .expect("Failed to get file path");
     let mut file = match File::create(file_path.clone()) {
         Ok(file) => file,
