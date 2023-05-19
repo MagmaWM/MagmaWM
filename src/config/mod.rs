@@ -73,7 +73,7 @@ pub fn generate_config() -> PathBuf {
                 modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
                 key: xkb::KEY_Return,
             },
-            Action::Spawn(String::from("alacritty")),
+            Action::Spawn(String::from("kitty")),
         );
 
         keybinding_map.insert(
