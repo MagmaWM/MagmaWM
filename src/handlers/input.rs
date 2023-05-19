@@ -1,13 +1,17 @@
 use smithay::{
-    backend::{input::{
-        self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent, KeyState,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
-    }, libinput::LibinputInputBackend},
+    backend::{
+        input::{
+            self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent,
+            KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
+        },
+        libinput::LibinputInputBackend,
+    },
     input::{
         keyboard::{xkb, FilterResult},
         pointer::{AxisFrame, ButtonEvent, MotionEvent, RelativeMotionEvent},
     },
-    utils::{Logical, Point, SERIAL_COUNTER}, reexports::input::Led,
+    reexports::input::Led,
+    utils::{Logical, Point, SERIAL_COUNTER},
 };
 use tracing::info;
 
