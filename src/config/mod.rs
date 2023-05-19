@@ -12,7 +12,7 @@ use smithay::{
     input::keyboard::xkb,
     utils::{Physical, Size},
 };
-use tracing::info;
+use tracing::{info, warn};
 
 mod types;
 #[derive(Debug, Deserialize, Serialize)]
@@ -47,95 +47,81 @@ impl OutputConfig {
 }
 
 pub fn generate_config() -> PathBuf {
-    println!("Would you like to generate a config file? [y/N]");
-    let mut input = String::new();
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
+    warn!("No config file found, generating one");
+    let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
+    let file_path = xdg
+        .place_config_file("magamawm/config.ron")
+        .expect("Failed to get file path");
+    let mut file = match File::create(file_path.clone()) {
+        Ok(file) => file,
+        Err(err) => {
+            println!("Failed to create file: {}", err);
+            panic!("Couldnt create config file")
+        }
+    };
 
-    if input.trim() == "y" {
-        println!("OK, generating config...");
-        let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
-        let file_path = xdg
-            .place_config_file("magamawm/config.ron")
-            .expect("Failed to get file path");
-        let mut file = match File::create(file_path.clone()) {
-            Ok(file) => file,
-            Err(err) => {
-                println!("Failed to create file: {}", err);
-                panic!("Couldnt create config file")
-            }
-        };
+    let mut keybinding_map = std::collections::HashMap::<KeyPattern, Action>::new();
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_Return,
+        },
+        Action::Spawn(String::from("kitty")),
+    );
 
-        let mut keybinding_map = std::collections::HashMap::<KeyPattern, Action>::new();
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-                key: xkb::KEY_Return,
-            },
-            Action::Spawn(String::from("kitty")),
-        );
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super, KeyModifier::Shift]).into(),
+            key: xkb::KEY_q,
+        },
+        Action::Quit,
+    );
 
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super, KeyModifier::Shift]).into(),
-                key: xkb::KEY_q,
-            },
-            Action::Quit,
-        );
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_w,
+        },
+        Action::Close,
+    );
 
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-                key: xkb::KEY_w,
-            },
-            Action::Close,
-        );
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_1,
+        },
+        Action::Workspace(1),
+    );
 
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-                key: xkb::KEY_1,
-            },
-            Action::Workspace(1),
-        );
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_2,
+        },
+        Action::Workspace(2),
+    );
 
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-                key: xkb::KEY_2,
-            },
-            Action::Workspace(2),
-        );
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_3,
+        },
+        Action::Workspace(3),
+    );
 
-        keybinding_map.insert(
-            KeyPattern {
-                modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-                key: xkb::KEY_3,
-            },
-            Action::Workspace(3),
-        );
-
-        let default_config = Config {
-            workspaces: 3,
-            keybindings: keybinding_map,
-            gaps: default_gaps(),
-            xkb: default_xkb(),
-            autostart: default_autostart(),
-            outputs: default_outputs(),
-        };
-        let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
-        let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
-        file.write_all(ron.as_bytes())
-            .expect("ERROR: Couldnt write to file");
-        file_path
-    } else if input.trim() == "n" || input.trim() == "" {
-        println!("OK, exitting...");
-        std::process::exit(0);
-    } else {
-        println!("ERROR: Unknown input, try again");
-        generate_config()
-    }
+    let default_config = Config {
+        workspaces: 3,
+        keybindings: keybinding_map,
+        gaps: default_gaps(),
+        xkb: default_xkb(),
+        autostart: default_autostart(),
+        outputs: default_outputs(),
+    };
+    let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
+    let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
+    file.write_all(ron.as_bytes())
+        .expect("ERROR: Couldnt write to file");
+    file_path
 }
 
 pub fn load_config() -> Config {
