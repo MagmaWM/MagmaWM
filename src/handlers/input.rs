@@ -1,7 +1,10 @@
 use smithay::{
-    backend::input::{
-        self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent, KeyState,
-        KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
+    backend::{
+        input::{
+            self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent,
+            KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
+        },
+        libinput::LibinputInputBackend,
     },
     input::{
         keyboard::{xkb, FilterResult},
@@ -19,15 +22,14 @@ use crate::{
 };
 
 impl MagmaState<UdevData> {
-    pub fn process_input_event_udev<I: InputBackend>(
+    pub fn process_input_event_udev(
         &mut self,
-        event: InputEvent<I>,
+        event: InputEvent<LibinputInputBackend>,
     ) -> Option<i32> {
         match event {
             InputEvent::Keyboard { event, .. } => {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
-
                 if let Some(action) = self.seat.get_keyboard().unwrap().input(
                     self,
                     event.key_code(),
@@ -58,6 +60,11 @@ impl MagmaState<UdevData> {
                         _ => self.handle_action(action),
                     }
                 };
+                None
+            }
+            InputEvent::DeviceAdded { mut device } => {
+                device.config_tap_set_enabled(true).ok();
+                device.config_tap_set_drag_enabled(true).ok();
                 None
             }
             event => {
