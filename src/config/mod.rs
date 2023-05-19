@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs::File, fs::OpenOptions, io, io::Write, path::PathBuf};
+use std::{fs::File, fs::OpenOptions, io::Write, path::PathBuf};
 
 use crate::config::types::KeyModifiersDef;
 
@@ -6,6 +6,7 @@ use self::types::{
     deserialize_KeyModifiers, deserialize_Keysym, serialize_KeyModifiers, serialize_Keysym,
     XkbConfig,
 };
+use indexmap::IndexMap;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use smithay::{
@@ -15,10 +16,11 @@ use smithay::{
 use tracing::{info, warn};
 
 mod types;
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Config {
     pub workspaces: u8,
-    pub keybindings: HashMap<KeyPattern, Action>,
+    pub keybindings: IndexMap<KeyPattern, Action>,
 
     #[serde(default = "default_gaps")]
     pub gaps: (i32, i32),
@@ -30,7 +32,7 @@ pub struct Config {
     pub autostart: Vec<String>,
 
     #[serde(default = "default_outputs")]
-    pub outputs: HashMap<String, OutputConfig>,
+    pub outputs: IndexMap<String, OutputConfig>,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -60,7 +62,7 @@ pub fn generate_config() -> PathBuf {
         }
     };
 
-    let mut keybinding_map = std::collections::HashMap::<KeyPattern, Action>::new();
+    let mut keybinding_map = indexmap::IndexMap::<KeyPattern, Action>::new();
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
@@ -108,6 +110,8 @@ pub fn generate_config() -> PathBuf {
         },
         Action::Workspace(3),
     );
+
+    // order hashmap using indexmap
 
     let default_config = Config {
         workspaces: 3,
@@ -165,8 +169,8 @@ fn default_autostart() -> Vec<String> {
     vec![]
 }
 
-fn default_outputs() -> HashMap<String, OutputConfig> {
-    HashMap::new()
+fn default_outputs() -> IndexMap<String, OutputConfig> {
+    IndexMap::new()
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
