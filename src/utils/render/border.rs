@@ -24,7 +24,8 @@ impl BorderShader {
             .compile_custom_pixel_shader(
                 BORDER_FRAG,
                 &[
-                    UniformName::new("color", UniformType::_3f),
+                    UniformName::new("startColor", UniformType::_3f),
+                    UniformName::new("endColor", UniformType::_3f),
                     UniformName::new("thickness", UniformType::_1f),
                     UniformName::new("radius", UniformType::_1f),
                 ],
@@ -36,7 +37,8 @@ impl BorderShader {
             None,
             1.0,
             vec![
-                Uniform::new("color", [0.580, 0.921, 0.921]),
+                Uniform::new("startColor", [1.0, 0.0, 0.0]),
+                Uniform::new("endColor", [0.580, 0.921, 0.921]),
                 Uniform::new("thickness", thickness),
                 Uniform::new("radius", thickness * 2.0),
             ],
