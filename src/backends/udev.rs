@@ -206,16 +206,16 @@ pub fn init_udev() {
                             // otherwise
                             surface.compositor.reset_buffers();
                             data.state.loop_handle.insert_idle(move |data| {
-                                if let Some(err) = data.state.render(node, crtc, None).err() {
-                                    if let SwapBuffersError::ContextLost(_) = err {
-                                        info!("Context lost on device {}, re-creating", node);
-                                        data.state.on_device_removed(node);
-                                        data.state.on_device_added(
-                                            node,
-                                            node.dev_path().unwrap(),
-                                            &mut data.display,
-                                        );
-                                    }
+                                if let Some(SwapBuffersError::ContextLost(_)) =
+                                    data.state.render(node, crtc, None).err()
+                                {
+                                    info!("Context lost on device {}, re-creating", node);
+                                    data.state.on_device_removed(node);
+                                    data.state.on_device_added(
+                                        node,
+                                        node.dev_path().unwrap(),
+                                        &mut data.display,
+                                    );
                                 }
                             });
                         }
