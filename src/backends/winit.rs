@@ -2,11 +2,7 @@ use std::time::Duration;
 
 use smithay::{
     backend::{
-        renderer::{
-            damage::OutputDamageTracker,
-            element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
-            gles::GlesRenderer,
-        },
+        renderer::{damage::OutputDamageTracker, element::AsRenderElements, gles::GlesRenderer},
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
@@ -18,7 +14,7 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Rectangle, Scale, Transform},
+    utils::{Point, Rectangle, Scale, Size, Transform},
     wayland::shell::wlr_layer::Layer,
 };
 use tracing::info;
@@ -33,7 +29,10 @@ impl Backend for WinitData {
         "winit".to_string()
     }
 }
-use crate::state::{Backend, CalloopData, MagmaState, CONFIG};
+use crate::{
+    state::{Backend, CalloopData, MagmaState, CONFIG},
+    utils::render::{border::BorderShader, CustomRenderElements},
+};
 
 pub fn init_winit() {
     let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
@@ -159,8 +158,14 @@ pub fn winit_dispatch(
 
     winitdata.backend.bind().unwrap();
 
-    let mut renderelements: Vec<WaylandSurfaceRenderElement<_>> = vec![];
-
+    let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
+    renderelements.push(CustomRenderElements::from(BorderShader::element(
+        winitdata.backend.renderer(),
+        Rectangle {
+            loc: Point::from((100, 100)),
+            size: Size::from((100, 100)),
+        },
+    )));
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
     let layer_map = layer_map_for_output(output);
@@ -178,7 +183,7 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                AsRenderElements::<GlesRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
@@ -198,7 +203,7 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                AsRenderElements::<GlesRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),

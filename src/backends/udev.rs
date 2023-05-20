@@ -60,7 +60,7 @@ use crate::{
     delegate_screencopy_manager,
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::CustomRenderElements,
+    utils::render::{border::BorderShader, CustomRenderElements},
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
@@ -626,7 +626,13 @@ impl MagmaState<UdevData> {
                 ),
             ]);
         }
-
+        renderelements.push(CustomRenderElements::from(BorderShader::element(
+            renderer.as_mut(),
+            Rectangle {
+                loc: Point::from((100, 100)),
+                size: Size::from((100, 100)),
+            },
+        )));
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()
