@@ -180,3 +180,31 @@ where
         CustomRenderElements::Shader(value)
     }
 }
+
+pub trait AsGlesRenderer
+where
+    Self: Renderer,
+    {
+        fn gles_renderer(&self) -> &GlesRenderer;
+        fn gles_renderer_mut(&mut self) -> &mut GlesRenderer;
+    }
+
+impl AsGlesRenderer for GlesRenderer {
+    fn gles_renderer(&self) -> &GlesRenderer {
+        self
+    }
+
+    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer {
+        self
+    }
+}
+
+impl<'a, 'b> AsGlesRenderer for GlMultiRenderer<'a, 'b> {
+    fn gles_renderer(&self) -> &GlesRenderer {
+        self.as_ref()
+    }
+
+    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer {
+        self.as_mut()
+    }
+}

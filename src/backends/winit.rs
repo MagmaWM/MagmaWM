@@ -159,13 +159,6 @@ pub fn winit_dispatch(
     winitdata.backend.bind().unwrap();
 
     let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
-    renderelements.push(CustomRenderElements::from(BorderShader::element(
-        winitdata.backend.renderer(),
-        Rectangle {
-            loc: Point::from((100, 100)),
-            size: Size::from((100, 100)),
-        },
-    )));
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
     let layer_map = layer_map_for_output(output);

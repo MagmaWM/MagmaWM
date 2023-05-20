@@ -626,13 +626,7 @@ impl MagmaState<UdevData> {
                 ),
             ]);
         }
-        renderelements.push(CustomRenderElements::from(BorderShader::element(
-            renderer.as_mut(),
-            Rectangle {
-                loc: Point::from((100, 100)),
-                size: Size::from((100, 100)),
-            },
-        )));
+        
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()
