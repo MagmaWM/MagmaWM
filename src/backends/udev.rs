@@ -505,8 +505,10 @@ impl MagmaState<UdevData> {
                     .egl_context()
                     .dmabuf_render_formats()
                     .clone();
-                let gbm_allocator =
-                    GbmAllocator::new(device.gbm.clone(), GbmBufferFlags::RENDERING | GbmBufferFlags::SCANOUT);
+                let gbm_allocator = GbmAllocator::new(
+                    device.gbm.clone(),
+                    GbmBufferFlags::RENDERING | GbmBufferFlags::SCANOUT,
+                );
 
                 let driver = match device.drm.get_driver() {
                     Ok(driver) => driver,
