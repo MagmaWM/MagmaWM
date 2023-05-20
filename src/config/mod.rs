@@ -2,7 +2,7 @@ use std::{fs::File, fs::OpenOptions, io::Write, path::PathBuf};
 
 use self::types::{
     deserialize_EndColour, deserialize_KeyModifiers, deserialize_Keysym, deserialize_StartColour,
-    serialize_KeyModifiers, serialize_Keysym, XkbConfig,
+    serialize_KeyModifiers, serialize_Keysym, XkbConfig, serialize_EndColour, serialize_StartColour,
 };
 use crate::config::types::KeyModifiersDef;
 use indexmap::IndexMap;
@@ -234,8 +234,10 @@ pub enum Action {
 pub struct Borders {
     pub thickness: u8,
     #[serde(deserialize_with = "deserialize_StartColour")]
+    #[serde(serialize_with = "serialize_StartColour")]
     pub start_color: [f32; 3],
     #[serde(deserialize_with = "deserialize_EndColour")]
+    #[serde(serialize_with = "serialize_EndColour")]
     pub end_color: Option<[f32; 3]>,
     pub radius: f32,
     pub gradient_angle: f32,
