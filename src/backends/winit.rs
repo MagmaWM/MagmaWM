@@ -14,7 +14,7 @@ use smithay::{
         },
         wayland_server::Display,
     },
-    utils::{Point, Rectangle, Scale, Size, Transform},
+    utils::{Rectangle, Scale, Transform},
     wayland::shell::wlr_layer::Layer,
 };
 use tracing::info;
@@ -31,7 +31,7 @@ impl Backend for WinitData {
 }
 use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{border::BorderShader, CustomRenderElements},
+    utils::render::CustomRenderElements,
 };
 
 pub fn init_winit() {

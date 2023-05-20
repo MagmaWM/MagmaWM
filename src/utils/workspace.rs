@@ -6,14 +6,19 @@ use std::{
 use smithay::{
     backend::renderer::{
         element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
-        ImportAll, Renderer, Texture, gles::element::PixelShaderElement,
+        gles::element::PixelShaderElement,
+        ImportAll, Renderer, Texture,
     },
     desktop::{space::SpaceElement, Window},
     output::Output,
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
-use super::{binarytree::BinaryTree, tiling::bsp_update_layout, render::{AsGlesRenderer, CustomRenderElements, border::BorderShader}};
+use super::{
+    binarytree::BinaryTree,
+    render::{border::BorderShader, AsGlesRenderer},
+    tiling::bsp_update_layout,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MagmaWindow {
@@ -81,7 +86,10 @@ impl Workspace {
         removed
     }
 
-    pub fn render_elements<R: Renderer + ImportAll + AsGlesRenderer, C: From<WaylandSurfaceRenderElement<R>> + From<PixelShaderElement>>(
+    pub fn render_elements<
+        R: Renderer + ImportAll + AsGlesRenderer,
+        C: From<WaylandSurfaceRenderElement<R>> + From<PixelShaderElement>,
+    >(
         &self,
         renderer: &mut R,
     ) -> Vec<C>
@@ -95,7 +103,10 @@ impl Workspace {
                 element.borrow().render_location().to_physical(1),
                 Scale::from(1.0),
             ));
-            render_elements.push(C::from(BorderShader::element(renderer.gles_renderer_mut(), element.borrow().rec)));
+            render_elements.push(C::from(BorderShader::element(
+                renderer.gles_renderer_mut(),
+                element.borrow().rec,
+            )));
         }
         render_elements
     }

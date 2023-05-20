@@ -184,10 +184,10 @@ where
 pub trait AsGlesRenderer
 where
     Self: Renderer,
-    {
-        fn gles_renderer(&self) -> &GlesRenderer;
-        fn gles_renderer_mut(&mut self) -> &mut GlesRenderer;
-    }
+{
+    fn gles_renderer(&self) -> &GlesRenderer;
+    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer;
+}
 
 impl AsGlesRenderer for GlesRenderer {
     fn gles_renderer(&self) -> &GlesRenderer {
