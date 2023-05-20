@@ -31,7 +31,7 @@ impl Backend for WinitData {
 }
 use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::CustomRenderElements,
+    utils::render::{CustomRenderElements, border::BorderShader},
 };
 
 pub fn init_winit() {
@@ -80,7 +80,7 @@ pub fn init_winit() {
     let mut data = CalloopData { display, state };
 
     let state = &mut data.state;
-
+    BorderShader::init(state.backend_data.backend.renderer());
     // map output to every workspace
     for workspace in state.workspaces.iter() {
         workspace.add_output(output.clone());

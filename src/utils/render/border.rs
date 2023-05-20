@@ -1,25 +1,15 @@
 use smithay::{
     backend::renderer::gles::{
-        element::PixelShaderElement, GlesRenderer, Uniform, UniformName, UniformType,
+        element::PixelShaderElement, GlesRenderer, Uniform, UniformName, UniformType, GlesPixelProgram,
     },
     utils::{Logical, Point, Rectangle, Size},
 };
 
 const BORDER_FRAG: &str = include_str!("shaders/borders.frag");
-pub struct BorderShader;
+pub struct BorderShader(pub GlesPixelProgram);
 
 impl BorderShader {
-    pub fn element(
-        renderer: &mut GlesRenderer,
-        geo: Rectangle<i32, Logical>,
-    ) -> PixelShaderElement {
-        let thickness: f32 = 8.0;
-        let thickness_loc = (thickness as i32, thickness as i32);
-        let thickness_size = ((thickness * 2.0) as i32, (thickness * 2.0) as i32);
-        let geo = Rectangle::from_loc_and_size(
-            geo.loc - Point::from(thickness_loc),
-            geo.size + Size::from(thickness_size),
-        );
+    pub fn init(renderer: &mut GlesRenderer) {
         let shader = renderer
             .compile_custom_pixel_shader(
                 BORDER_FRAG,
@@ -31,8 +21,24 @@ impl BorderShader {
                 ],
             )
             .unwrap();
+        renderer.egl_context().user_data().insert_if_missing(|| BorderShader(shader));
+    }
+    pub fn get(renderer: &mut GlesRenderer) -> GlesPixelProgram {
+        renderer.egl_context().user_data().get::<BorderShader>().expect("Border Shader not initialized").0.clone()
+    }
+    pub fn element(
+        renderer: &mut GlesRenderer,
+        geo: Rectangle<i32, Logical>,
+    ) -> PixelShaderElement {
+        let thickness: f32 = 8.0;
+        let thickness_loc = (thickness as i32, thickness as i32);
+        let thickness_size = ((thickness * 2.0) as i32, (thickness * 2.0) as i32);
+        let geo = Rectangle::from_loc_and_size(
+            geo.loc - Point::from(thickness_loc),
+            geo.size + Size::from(thickness_size),
+        );
         PixelShaderElement::new(
-            shader,
+            Self::get(renderer),
             geo,
             None,
             1.0,
