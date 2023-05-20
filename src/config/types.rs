@@ -160,7 +160,9 @@ pub fn serialize_StartColour<S>(rgb: &[f32; 3], serializer: S) -> Result<S::Ok, 
 where
     S: Serializer,
 {
-    serializer.serialize_str(&Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string())
+    serializer.serialize_str(
+        &Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string(),
+    )
 }
 
 #[allow(non_snake_case)]
@@ -185,7 +187,9 @@ where
     S: Serializer,
 {
     if let Some(rgb) = rgb {
-        serializer.serialize_some(&Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string())
+        serializer.serialize_some(
+            &Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string(),
+        )
     } else {
         serializer.serialize_none()
     }

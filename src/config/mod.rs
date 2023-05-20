@@ -2,7 +2,8 @@ use std::{fs::File, fs::OpenOptions, io::Write, path::PathBuf};
 
 use self::types::{
     deserialize_EndColour, deserialize_KeyModifiers, deserialize_Keysym, deserialize_StartColour,
-    serialize_KeyModifiers, serialize_Keysym, XkbConfig, serialize_EndColour, serialize_StartColour,
+    serialize_EndColour, serialize_KeyModifiers, serialize_Keysym, serialize_StartColour,
+    XkbConfig,
 };
 use crate::config::types::KeyModifiersDef;
 use indexmap::IndexMap;
