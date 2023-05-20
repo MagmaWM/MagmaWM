@@ -6,6 +6,8 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Size},
 };
 
+use crate::state::CONFIG;
+
 const BORDER_FRAG: &str = include_str!("shaders/borders.frag");
 pub struct BorderShader(pub GlesPixelProgram);
 
@@ -40,7 +42,7 @@ impl BorderShader {
         renderer: &mut GlesRenderer,
         geo: Rectangle<i32, Logical>,
     ) -> PixelShaderElement {
-        let thickness: f32 = 8.0;
+        let thickness: f32 = CONFIG.borders.thickness as f32;
         let thickness_loc = (thickness as i32, thickness as i32);
         let thickness_size = ((thickness * 2.0) as i32, (thickness * 2.0) as i32);
         let geo = Rectangle::from_loc_and_size(
@@ -53,10 +55,16 @@ impl BorderShader {
             None,
             1.0,
             vec![
-                Uniform::new("startColor", [1.0, 0.0, 0.0]),
-                Uniform::new("endColor", [0.580, 0.921, 0.921]),
+                Uniform::new("startColor", CONFIG.borders.start_color),
+                Uniform::new(
+                    "endColor",
+                    CONFIG
+                        .borders
+                        .end_color
+                        .unwrap_or(CONFIG.borders.start_color),
+                ),
                 Uniform::new("thickness", thickness),
-                Uniform::new("radius", thickness * 2.0),
+                Uniform::new("radius", CONFIG.borders.radius),
             ],
         )
     }
