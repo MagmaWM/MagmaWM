@@ -60,7 +60,7 @@ use crate::{
     delegate_screencopy_manager,
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{CustomRenderElements, border::BorderShader},
+    utils::render::{border::BorderShader, CustomRenderElements},
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");

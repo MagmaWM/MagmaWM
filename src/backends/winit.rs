@@ -31,7 +31,7 @@ impl Backend for WinitData {
 }
 use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{CustomRenderElements, border::BorderShader},
+    utils::render::{border::BorderShader, CustomRenderElements},
 };
 
 pub fn init_winit() {

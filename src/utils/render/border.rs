@@ -1,6 +1,7 @@
 use smithay::{
     backend::renderer::gles::{
-        element::PixelShaderElement, GlesRenderer, Uniform, UniformName, UniformType, GlesPixelProgram,
+        element::PixelShaderElement, GlesPixelProgram, GlesRenderer, Uniform, UniformName,
+        UniformType,
     },
     utils::{Logical, Point, Rectangle, Size},
 };
@@ -21,10 +22,19 @@ impl BorderShader {
                 ],
             )
             .unwrap();
-        renderer.egl_context().user_data().insert_if_missing(|| BorderShader(shader));
+        renderer
+            .egl_context()
+            .user_data()
+            .insert_if_missing(|| BorderShader(shader));
     }
     pub fn get(renderer: &mut GlesRenderer) -> GlesPixelProgram {
-        renderer.egl_context().user_data().get::<BorderShader>().expect("Border Shader not initialized").0.clone()
+        renderer
+            .egl_context()
+            .user_data()
+            .get::<BorderShader>()
+            .expect("Border Shader not initialized")
+            .0
+            .clone()
     }
     pub fn element(
         renderer: &mut GlesRenderer,
