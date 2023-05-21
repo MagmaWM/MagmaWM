@@ -180,7 +180,7 @@ fn default_outputs() -> IndexMap<String, OutputConfig> {
 fn default_borders() -> Borders {
     Borders {
         thickness: 8,
-        start_color: [1.0, 0.0, 0.0],
+        start_color: [0.880, 1.0, 1.0],
         end_color: Some([0.580, 0.921, 0.921]),
         radius: 8.0,
         gradient_angle: 0.0,
