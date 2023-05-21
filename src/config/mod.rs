@@ -95,7 +95,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_1,
         },
-        Action::Workspace(1),
+        Action::Workspace(0),
     );
 
     keybinding_map.insert(
@@ -103,7 +103,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_2,
         },
-        Action::Workspace(2),
+        Action::Workspace(1),
     );
 
     keybinding_map.insert(
@@ -111,7 +111,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_3,
         },
-        Action::Workspace(3),
+        Action::Workspace(2),
     );
 
     // order hashmap using indexmap
