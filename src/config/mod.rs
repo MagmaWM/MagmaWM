@@ -1,11 +1,11 @@
 use std::{fs::File, fs::OpenOptions, io::Write, path::PathBuf};
 
+use crate::config::types::KeyModifiersDef;
+
 use self::types::{
-    deserialize_EndColour, deserialize_KeyModifiers, deserialize_Keysym, deserialize_StartColour,
-    serialize_EndColour, serialize_KeyModifiers, serialize_Keysym, serialize_StartColour,
+    deserialize_KeyModifiers, deserialize_Keysym, serialize_KeyModifiers, serialize_Keysym,
     XkbConfig,
 };
-use crate::config::types::KeyModifiersDef;
 use indexmap::IndexMap;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
@@ -33,9 +33,6 @@ pub struct Config {
 
     #[serde(default = "default_outputs")]
     pub outputs: IndexMap<String, OutputConfig>,
-
-    #[serde(default = "default_borders")]
-    pub borders: Borders,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -95,7 +92,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_1,
         },
-        Action::Workspace(0),
+        Action::Workspace(1),
     );
 
     keybinding_map.insert(
@@ -103,7 +100,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_2,
         },
-        Action::Workspace(1),
+        Action::Workspace(2),
     );
 
     keybinding_map.insert(
@@ -111,7 +108,7 @@ pub fn generate_config() -> PathBuf {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_3,
         },
-        Action::Workspace(2),
+        Action::Workspace(3),
     );
 
     // order hashmap using indexmap
@@ -123,7 +120,6 @@ pub fn generate_config() -> PathBuf {
         xkb: default_xkb(),
         autostart: default_autostart(),
         outputs: default_outputs(),
-        borders: default_borders(),
     };
     let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
     let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
@@ -177,16 +173,6 @@ fn default_outputs() -> IndexMap<String, OutputConfig> {
     IndexMap::new()
 }
 
-fn default_borders() -> Borders {
-    Borders {
-        thickness: 8,
-        start_color: [0.880, 1.0, 1.0],
-        end_color: Some([0.580, 0.921, 0.921]),
-        radius: 8.0,
-        gradient_angle: 0.0,
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub enum KeyModifier {
     Ctrl,
@@ -229,17 +215,4 @@ pub enum Action {
     ToggleWindowFloating,
     VTSwitch(i32),
     Spawn(String),
-}
-
-#[derive(Debug, Deserialize, Serialize)]
-pub struct Borders {
-    pub thickness: u8,
-    #[serde(deserialize_with = "deserialize_StartColour")]
-    #[serde(serialize_with = "serialize_StartColour")]
-    pub start_color: [f32; 3],
-    #[serde(deserialize_with = "deserialize_EndColour")]
-    #[serde(serialize_with = "serialize_EndColour")]
-    pub end_color: Option<[f32; 3]>,
-    pub radius: f32,
-    pub gradient_angle: f32,
 }
