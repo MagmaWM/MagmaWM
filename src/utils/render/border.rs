@@ -21,6 +21,7 @@ impl BorderShader {
                     UniformName::new("endColor", UniformType::_3f),
                     UniformName::new("thickness", UniformType::_1f),
                     UniformName::new("radius", UniformType::_1f),
+                    UniformName::new("angle", UniformType::_1f),
                 ],
             )
             .unwrap();
@@ -65,6 +66,7 @@ impl BorderShader {
                 ),
                 Uniform::new("thickness", thickness),
                 Uniform::new("radius", CONFIG.borders.radius),
+                Uniform::new("angle", CONFIG.borders.gradient_angle),
             ],
         )
     }

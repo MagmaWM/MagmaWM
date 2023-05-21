@@ -183,7 +183,7 @@ fn default_borders() -> Borders {
         start_color: [1.0, 0.0, 0.0],
         end_color: Some([0.580, 0.921, 0.921]),
         radius: 8.0,
-        gradient_angle: 5.0,
+        gradient_angle: 0.0,
     }
 }
 

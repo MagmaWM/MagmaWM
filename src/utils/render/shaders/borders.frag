@@ -6,6 +6,7 @@ uniform float tint;
 uniform vec2 size;
 varying vec2 v_coords;
 
+uniform float angle;
 uniform vec3 startColor;
 uniform vec3 endColor;
 uniform float thickness;
@@ -23,8 +24,11 @@ void main() {
     float distance = rounded_box(location - center, size / 2.0 - vec2(thickness / 2.0), radius);
     float smoothedAlpha = 1.0 - smoothstep(0.0, 2.0, abs(distance) - (thickness / 2.0));
 
-    // Compute gradient color
-    vec3 gradientColor = mix(startColor, endColor, smoothstep(0.0, 1.0, v_coords.x));
+    vec2 gradientDirection = vec2(cos(angle), sin(angle));
+
+    float dotProduct = dot(v_coords, gradientDirection);
+
+    vec3 gradientColor = mix(startColor, endColor, smoothstep(0.0, 1.0, dotProduct));
 
     mix_color = mix(vec4(0.0, 0.0, 0.0, 0.0), vec4(gradientColor, alpha), smoothedAlpha);
 
