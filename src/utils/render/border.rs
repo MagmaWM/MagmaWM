@@ -65,7 +65,7 @@ impl BorderShader {
                         .unwrap_or(CONFIG.borders.start_color),
                 ),
                 Uniform::new("thickness", thickness),
-                Uniform::new("radius", CONFIG.borders.radius),
+                Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
                 Uniform::new("angle", CONFIG.borders.gradient_angle),
             ],
         )
