@@ -13,7 +13,6 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
     wayland::{compositor::with_states, shell::xdg::SurfaceCachedState},
 };
-use tracing::info;
 
 use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
 
@@ -37,6 +36,7 @@ pub struct Workspace {
     windows: Vec<Rc<RefCell<MagmaWindow>>>,
     outputs: Vec<Output>,
     pub layout_tree: BinaryTree,
+    pub floating: Vec<Rc<RefCell<MagmaWindow>>>,
 }
 
 impl Workspace {
@@ -45,6 +45,7 @@ impl Workspace {
             windows: Vec::new(),
             outputs: Vec::new(),
             layout_tree: BinaryTree::new(),
+            floating: Vec::new(),
         }
     }
 
@@ -62,7 +63,7 @@ impl Workspace {
         // add window to vec and remap if exists
         self.windows
             .retain(|w| w.borrow().window != window.borrow().window);
-        self.windows.push(window.clone());
+        self.windows.insert(0,window.clone());
         let (max_size, min_size) =
             with_states(window.borrow().window.toplevel().wl_surface(), |states| {
                 let attr = states.cached_state.current::<SurfaceCachedState>();
@@ -74,14 +75,12 @@ impl Workspace {
             && (min_size.w == max_size.w || min_size.h == max_size.h))
             || parent
         {
-            info!("new floating window");
-            // self.floating.push(window);
+            self.floating.push(window);
+        } else {
+            self.layout_tree
+                .insert(window, self.layout_tree.next_split(), 0.5);
+            bsp_update_layout(self);
         }
-        // else {
-        self.layout_tree
-            .insert(window, self.layout_tree.next_split(), 0.5);
-        bsp_update_layout(self);
-        // }
     }
 
     pub fn remove_window(&mut self, window: &Window) -> Option<Rc<RefCell<MagmaWindow>>> {
