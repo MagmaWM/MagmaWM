@@ -206,7 +206,17 @@ pub fn init_udev() {
                             // otherwise
                             surface.compositor.reset_buffers();
                             data.state.loop_handle.insert_idle(move |data| {
-                                data.state.render(node, crtc, None).ok();
+                                if let Some(SwapBuffersError::ContextLost(_)) =
+                                    data.state.render(node, crtc, None).err()
+                                {
+                                    info!("Context lost on device {}, re-creating", node);
+                                    data.state.on_device_removed(node);
+                                    data.state.on_device_added(
+                                        node,
+                                        node.dev_path().unwrap(),
+                                        &mut data.display,
+                                    );
+                                }
                             });
                         }
                     }
@@ -505,8 +515,10 @@ impl MagmaState<UdevData> {
                     .egl_context()
                     .dmabuf_render_formats()
                     .clone();
-                let gbm_allocator =
-                    GbmAllocator::new(device.gbm.clone(), GbmBufferFlags::RENDERING);
+                let gbm_allocator = GbmAllocator::new(
+                    device.gbm.clone(),
+                    GbmBufferFlags::RENDERING | GbmBufferFlags::SCANOUT,
+                );
 
                 let driver = match device.drm.get_driver() {
                     Ok(driver) => driver,
