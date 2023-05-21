@@ -11,7 +11,9 @@ use smithay::{
     desktop::{space::SpaceElement, Window},
     output::Output,
     utils::{Logical, Point, Rectangle, Scale, Transform},
+    wayland::{compositor::with_states, shell::xdg::SurfaceCachedState},
 };
+use tracing::info;
 
 use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
 
@@ -61,9 +63,25 @@ impl Workspace {
         self.windows
             .retain(|w| w.borrow().window != window.borrow().window);
         self.windows.push(window.clone());
+        let (max_size, min_size) =
+            with_states(window.borrow().window.toplevel().wl_surface(), |states| {
+                let attr = states.cached_state.current::<SurfaceCachedState>();
+                dbg!(attr.max_size, attr.min_size)
+            });
+        let parent = dbg!(window.borrow().window.toplevel().parent().is_some());
+        if (min_size.w != 0
+            && min_size.h != 0
+            && (min_size.w == max_size.w || min_size.h == max_size.h))
+            || parent
+        {
+            info!("new floating window");
+            // self.floating.push(window);
+        }
+        // else {
         self.layout_tree
             .insert(window, self.layout_tree.next_split(), 0.5);
         bsp_update_layout(self);
+        // }
     }
 
     pub fn remove_window(&mut self, window: &Window) -> Option<Rc<RefCell<MagmaWindow>>> {
@@ -165,6 +183,7 @@ impl Default for Workspace {
 pub struct Workspaces {
     workspaces: Vec<Workspace>,
     pub current: u8,
+    pub pending: Vec<Window>,
 }
 
 impl Workspaces {
@@ -172,6 +191,7 @@ impl Workspaces {
         Workspaces {
             workspaces: (0..workspaceamount).map(|_| Workspace::new()).collect(),
             current: 0,
+            pending: Vec::new(),
         }
     }
 

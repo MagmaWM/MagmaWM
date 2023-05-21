@@ -1,3 +1,5 @@
+use std::{cell::RefCell, rc::Rc};
+
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     delegate_compositor, delegate_data_device, delegate_layer_shell, delegate_output,
@@ -11,7 +13,10 @@ use smithay::{
     },
     wayland::{
         buffer::BufferHandler,
-        compositor::{get_parent, is_sync_subsurface, CompositorHandler, CompositorState},
+        compositor::{
+            get_parent, is_sync_subsurface, with_states, CompositorHandler, CompositorState,
+            SurfaceAttributes,
+        },
         data_device::{
             set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler,
         },
@@ -26,7 +31,7 @@ use smithay::{
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::{focus::FocusTarget, tiling::bsp_update_layout},
+    utils::{focus::FocusTarget, tiling::bsp_update_layout, workspace::MagmaWindow},
 };
 
 pub mod input;
@@ -38,6 +43,30 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
     }
 
     fn commit(&mut self, surface: &WlSurface) {
+        if let Some(window) = self
+            .workspaces
+            .pending
+            .iter()
+            .find(|w| w.toplevel().wl_surface() == surface)
+            .cloned()
+        {
+            if with_states(surface, |states| {
+                states
+                    .cached_state
+                    .current::<SurfaceAttributes>()
+                    .buffer
+                    .is_some()
+            }) {
+                self.workspaces
+                    .current_mut()
+                    .add_window(Rc::new(RefCell::new(MagmaWindow {
+                        window: window.clone(),
+                        rec: window.geometry(),
+                    })));
+                self.workspaces.pending.retain(|w| *w != window);
+                self.set_input_focus(FocusTarget::Window(window));
+            }
+        }
         on_commit_buffer_handler(surface);
         if !is_sync_subsurface(surface) {
             let mut root = surface.clone();

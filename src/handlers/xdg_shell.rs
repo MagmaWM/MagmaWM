@@ -23,15 +23,12 @@ use smithay::{
         },
     },
 };
-use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use std::sync::Mutex;
 use tracing::warn;
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::{
-        focus::FocusTarget,
-        workspace::{MagmaWindow, Workspaces},
-    },
+    utils::workspace::Workspaces,
 };
 
 impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
@@ -41,13 +38,7 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
         let window = Window::new(surface);
-        self.workspaces
-            .current_mut()
-            .add_window(Rc::new(RefCell::new(MagmaWindow {
-                window: window.clone(),
-                rec: window.geometry(),
-            })));
-        self.set_input_focus(FocusTarget::Window(window));
+        self.workspaces.pending.push(window);
     }
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
         let window = self
@@ -81,9 +72,12 @@ delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 // Should be called on `WlSurface::commit`
 pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager: &PopupManager) {
+    //TODO fix this mess
     if let Some(window) = workspaces
-        .all_windows()
+        .pending
+        .iter()
         .find(|w| w.toplevel().wl_surface() == surface)
+        .cloned()
     {
         let initial_configure_sent = with_states(surface, |states| {
             states
