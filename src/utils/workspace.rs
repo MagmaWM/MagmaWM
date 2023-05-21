@@ -14,6 +14,8 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
+use crate::state::CONFIG;
+
 use super::{
     binarytree::BinaryTree,
     render::{border::BorderShader, AsGlesRenderer},
@@ -98,10 +100,12 @@ impl Workspace {
     {
         let mut render_elements: Vec<C> = Vec::new();
         for element in &self.windows {
-            render_elements.push(C::from(BorderShader::element(
-                renderer.gles_renderer_mut(),
-                element.borrow().rec,
-            )));
+            if CONFIG.borders.thickness > 0 {
+                render_elements.push(C::from(BorderShader::element(
+                    renderer.gles_renderer_mut(),
+                    element.borrow().rec,
+                )));
+            }
             render_elements.append(&mut element.borrow().window.render_elements(
                 renderer,
                 element.borrow().render_location().to_physical(1),
