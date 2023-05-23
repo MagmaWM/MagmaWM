@@ -44,6 +44,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
             right,
             split,
             ratio,
+            counter_ratio,
         } => {
             if let BinaryTree::Window(w) = left.as_mut() {
                 generate_layout(
@@ -120,12 +121,13 @@ pub fn generate_layout(
         BinaryTree::Split {
             split,
             ratio,
+            counter_ratio,
             left,
             right,
         } => {
             if let BinaryTree::Window(w) = left.as_mut() {
                 w.borrow_mut().rec = rec;
-                generate_layout(right.as_mut(), w, rec, *split, *ratio, output, gaps)
+                generate_layout(right.as_mut(), w, rec, *split, *counter_ratio, output, gaps)
             }
         }
     }

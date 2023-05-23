@@ -33,6 +33,9 @@ pub struct Config {
 
     #[serde(default = "default_outputs")]
     pub outputs: IndexMap<String, OutputConfig>,
+
+    #[serde(default = "default_tile_ratio_update_interval")]
+    pub tile_ratio_update_interval: f32,
 }
 
 #[derive(Debug, Deserialize, Clone, Serialize)]
@@ -120,6 +123,7 @@ pub fn generate_config() -> PathBuf {
         xkb: default_xkb(),
         autostart: default_autostart(),
         outputs: default_outputs(),
+        tile_ratio_update_interval: default_tile_ratio_update_interval(),
     };
     let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
     let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
@@ -159,6 +163,10 @@ pub fn load_config() -> Config {
 
 fn default_gaps() -> (i32, i32) {
     (5, 5)
+}
+
+fn default_tile_ratio_update_interval() -> f32 {
+    0.2f32
 }
 
 fn default_xkb() -> XkbConfig {

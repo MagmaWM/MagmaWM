@@ -11,6 +11,7 @@ pub enum BinaryTree {
     Split {
         split: HorizontalOrVertical,
         ratio: f32,
+        counter_ratio: f32,
         left: Box<BinaryTree>,
         right: Box<BinaryTree>,
     },
@@ -26,12 +27,14 @@ impl Debug for BinaryTree {
                 right,
                 split,
                 ratio,
+                counter_ratio,
             } => f
                 .debug_struct("Split")
                 .field("split", split)
                 .field("ratio", ratio)
                 .field("left", left)
                 .field("right", right)
+                .field("counter-ratio", counter_ratio)
                 .finish(),
         }
     }
@@ -59,11 +62,13 @@ impl BinaryTree {
                 *self = BinaryTree::Window(window);
             }
             BinaryTree::Window(w) => {
+                let counter_rationew = 1.0f32 - rationew;
                 *self = BinaryTree::Split {
                     left: Box::new(BinaryTree::Window(w.clone())),
                     right: Box::new(BinaryTree::Window(window)),
                     split: splitnew,
                     ratio: rationew,
+                    counter_ratio: counter_rationew,
                 };
             }
             BinaryTree::Split {
@@ -71,6 +76,7 @@ impl BinaryTree {
                 right,
                 split: _,
                 ratio: _,
+                counter_ratio: _,
             } => {
                 right.insert(window, splitnew, rationew);
             }
@@ -91,6 +97,7 @@ impl BinaryTree {
                 right,
                 split: _,
                 ratio: _,
+                counter_ratio: _,
             } => {
                 if let BinaryTree::Window(w) = left.as_ref() {
                     if w.borrow().window == *window {
@@ -119,12 +126,14 @@ impl BinaryTree {
                 right,
                 split,
                 ratio: _,
+                counter_ratio: _,
             } => {
                 if let BinaryTree::Split {
                     left: _,
                     right: _,
                     split: _,
                     ratio: _,
+                    counter_ratio: _,
                 } = right.as_ref()
                 {
                     right.next_split()
@@ -133,6 +142,33 @@ impl BinaryTree {
                 } else {
                     HorizontalOrVertical::Horizontal
                 }
+            }
+        }
+    }
+
+    fn update_ratio(&mut self, new_ratio: f32) {
+        match self {
+            BinaryTree::Empty => {}
+            BinaryTree::Window(_) => {}
+            BinaryTree::Split {
+                split: _,
+                ratio,
+                counter_ratio,
+                left: _,
+                right,
+            } => {
+                *ratio = new_ratio;
+                *counter_ratio = 1.0f32 - *ratio;
+                if let BinaryTree::Split {
+                    split: _,
+                    ratio: _,
+                    left: _,
+                    right: _,
+                    counter_ratio: _,
+                } = right.as_ref()
+                {
+                    right.update_ratio(new_ratio);
+                };
             }
         }
     }
