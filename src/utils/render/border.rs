@@ -8,14 +8,18 @@ use smithay::{
 
 use crate::state::CONFIG;
 
+const ROUNDED_BORDER_FRAG: &str = include_str!("shaders/rounded_borders.frag");
 const BORDER_FRAG: &str = include_str!("shaders/borders.frag");
-pub struct BorderShader(pub GlesPixelProgram);
+pub struct BorderShader {
+    rounded: GlesPixelProgram,
+    default: GlesPixelProgram,
+}
 
 impl BorderShader {
     pub fn init(renderer: &mut GlesRenderer) {
-        let shader = renderer
+        let rounded = renderer
             .compile_custom_pixel_shader(
-                BORDER_FRAG,
+                ROUNDED_BORDER_FRAG,
                 &[
                     UniformName::new("startColor", UniformType::_3f),
                     UniformName::new("endColor", UniformType::_3f),
@@ -25,19 +29,28 @@ impl BorderShader {
                 ],
             )
             .unwrap();
+        let default = renderer
+            .compile_custom_pixel_shader(
+                BORDER_FRAG,
+                &[
+                    UniformName::new("startColor", UniformType::_3f),
+                    UniformName::new("endColor", UniformType::_3f),
+                    UniformName::new("thickness", UniformType::_1f),
+                    UniformName::new("angle", UniformType::_1f),
+                ],
+            )
+            .unwrap();
         renderer
             .egl_context()
             .user_data()
-            .insert_if_missing(|| BorderShader(shader));
+            .insert_if_missing(|| BorderShader { rounded, default });
     }
-    pub fn get(renderer: &mut GlesRenderer) -> GlesPixelProgram {
+    pub fn get(renderer: &mut GlesRenderer) -> &BorderShader {
         renderer
             .egl_context()
             .user_data()
             .get::<BorderShader>()
             .expect("Border Shader not initialized")
-            .0
-            .clone()
     }
     pub fn element(
         renderer: &mut GlesRenderer,
@@ -50,24 +63,45 @@ impl BorderShader {
             geo.loc - Point::from(thickness_loc),
             geo.size + Size::from(thickness_size),
         );
-        PixelShaderElement::new(
-            Self::get(renderer),
-            geo,
-            None,
-            1.0,
-            vec![
-                Uniform::new("startColor", CONFIG.borders.start_color),
-                Uniform::new(
-                    "endColor",
-                    CONFIG
-                        .borders
-                        .end_color
-                        .unwrap_or(CONFIG.borders.start_color),
-                ),
-                Uniform::new("thickness", thickness),
-                Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
-                Uniform::new("angle", CONFIG.borders.gradient_angle),
-            ],
-        )
+        if CONFIG.borders.radius > 0.0 {
+            PixelShaderElement::new(
+                Self::get(renderer).rounded.clone(),
+                geo,
+                None,
+                1.0,
+                vec![
+                    Uniform::new("startColor", CONFIG.borders.start_color),
+                    Uniform::new(
+                        "endColor",
+                        CONFIG
+                            .borders
+                            .end_color
+                            .unwrap_or(CONFIG.borders.start_color),
+                    ),
+                    Uniform::new("thickness", thickness),
+                    Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
+                    Uniform::new("angle", CONFIG.borders.gradient_angle),
+                ],
+            )
+        } else {
+            PixelShaderElement::new(
+                Self::get(renderer).default.clone(),
+                geo,
+                None,
+                1.0,
+                vec![
+                    Uniform::new("startColor", CONFIG.borders.start_color),
+                    Uniform::new(
+                        "endColor",
+                        CONFIG
+                            .borders
+                            .end_color
+                            .unwrap_or(CONFIG.borders.start_color),
+                    ),
+                    Uniform::new("thickness", thickness),
+                    Uniform::new("angle", CONFIG.borders.gradient_angle),
+                ],
+            )
+        }
     }
 }

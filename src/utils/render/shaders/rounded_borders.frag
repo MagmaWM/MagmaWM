@@ -10,14 +10,19 @@ uniform float angle;
 uniform vec3 startColor;
 uniform vec3 endColor;
 uniform float thickness;
+uniform float radius;
+
+float rounded_box(vec2 center, vec2 size, float radius) {
+    return length(max(abs(center) - size + radius, 0.0)) - radius;
+}
 
 void main() {
     vec2 center = size / 2.0 - vec2(0.5);
     vec2 location = v_coords * size;
     vec4 mix_color;
 
-    float distance = max(abs(location.x - center.x) - (size.x / 2.0 - thickness / 2.0), abs(location.y - center.y) - (size.y / 2.0 - thickness / 2.0));
-    float smoothedAlpha = 1.0 - smoothstep(0.0, thickness, abs(distance));
+    float distance = abs(rounded_box(location - center, size / 2.0 - vec2(thickness / 2.0), radius));
+    float smoothedAlpha = 1.0 - smoothstep(0.0, 2.0, abs(distance) - (thickness / 2.0));
 
     vec2 gradientDirection = vec2(cos(angle), sin(angle));
 
