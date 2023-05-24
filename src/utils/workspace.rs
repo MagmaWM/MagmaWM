@@ -63,7 +63,7 @@ impl Workspace {
         // add window to vec and remap if exists
         self.windows
             .retain(|w| w.borrow().window != window.borrow().window);
-        self.windows.insert(0,window.clone());
+        self.windows.insert(0, window.clone());
         let (max_size, min_size) =
             with_states(window.borrow().window.toplevel().wl_surface(), |states| {
                 let attr = states.cached_state.current::<SurfaceCachedState>();
@@ -76,8 +76,16 @@ impl Workspace {
             || parent
         {
             let mw = window.borrow().rec;
-            let os = self.outputs.iter().next().unwrap().current_mode().unwrap().size.to_logical(1);
-            window.borrow_mut().rec.loc =  Point::from((os.w / 2 - mw.size.w / 2, os.h / 2 - mw.size.h / 2));
+            let os = self
+                .outputs
+                .first()
+                .unwrap()
+                .current_mode()
+                .unwrap()
+                .size
+                .to_logical(1);
+            window.borrow_mut().rec.loc =
+                Point::from((os.w / 2 - mw.size.w / 2, os.h / 2 - mw.size.h / 2));
             self.floating.push(window);
         } else {
             self.layout_tree
