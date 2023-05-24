@@ -229,4 +229,5 @@ pub fn winit_dispatch(
     workspace.windows().for_each(|e| e.refresh());
     display.flush_clients().unwrap();
     state.popup_manager.cleanup();
+    BorderShader::cleanup(winitdata.backend.renderer());
 }

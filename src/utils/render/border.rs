@@ -1,9 +1,15 @@
+use std::{cell::RefCell, collections::HashMap};
+
 use smithay::{
-    backend::renderer::gles::{
-        element::PixelShaderElement, GlesPixelProgram, GlesRenderer, Uniform, UniformName,
-        UniformType,
+    backend::renderer::{
+        element::Element,
+        gles::{
+            element::PixelShaderElement, GlesPixelProgram, GlesRenderer, Uniform, UniformName,
+            UniformType,
+        },
     },
-    utils::{Logical, Point, Rectangle, Size},
+    desktop::Window,
+    utils::{IsAlive, Logical, Point, Rectangle, Size},
 };
 
 use crate::state::CONFIG;
@@ -14,6 +20,8 @@ pub struct BorderShader {
     rounded: GlesPixelProgram,
     default: GlesPixelProgram,
 }
+
+struct BorderShaderElements(RefCell<HashMap<Window, PixelShaderElement>>);
 
 impl BorderShader {
     pub fn init(renderer: &mut GlesRenderer) {
@@ -44,8 +52,12 @@ impl BorderShader {
             .egl_context()
             .user_data()
             .insert_if_missing(|| BorderShader { rounded, default });
+        renderer
+            .egl_context()
+            .user_data()
+            .insert_if_missing(|| BorderShaderElements(RefCell::new(HashMap::new())));
     }
-    pub fn get(renderer: &mut GlesRenderer) -> &BorderShader {
+    pub fn get(renderer: &GlesRenderer) -> &BorderShader {
         renderer
             .egl_context()
             .user_data()
@@ -54,54 +66,81 @@ impl BorderShader {
     }
     pub fn element(
         renderer: &mut GlesRenderer,
-        geo: Rectangle<i32, Logical>,
+        window: &Window,
+        loc: Point<i32, Logical>,
     ) -> PixelShaderElement {
         let thickness: f32 = CONFIG.borders.thickness as f32;
         let thickness_loc = (thickness as i32, thickness as i32);
         let thickness_size = ((thickness * 2.0) as i32, (thickness * 2.0) as i32);
         let geo = Rectangle::from_loc_and_size(
-            geo.loc - Point::from(thickness_loc),
-            geo.size + Size::from(thickness_size),
+            loc - Point::from(thickness_loc),
+            window.geometry().size + Size::from(thickness_size),
         );
-        if CONFIG.borders.radius > 0.0 {
-            PixelShaderElement::new(
-                Self::get(renderer).rounded.clone(),
-                geo,
-                None,
-                1.0,
-                vec![
-                    Uniform::new("startColor", CONFIG.borders.start_color),
-                    Uniform::new(
-                        "endColor",
-                        CONFIG
-                            .borders
-                            .end_color
-                            .unwrap_or(CONFIG.borders.start_color),
-                    ),
-                    Uniform::new("thickness", thickness),
-                    Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
-                    Uniform::new("angle", CONFIG.borders.gradient_angle),
-                ],
-            )
+        let elements = &mut renderer
+            .egl_context()
+            .user_data()
+            .get::<BorderShaderElements>()
+            .expect("Border Shader not initialized")
+            .0
+            .borrow_mut();
+        if let Some(elem) = elements.get_mut(window) {
+            if elem.geometry(1.0.into()).to_logical(1) != geo {
+                elem.resize(geo, None);
+            }
+            elem.clone()
         } else {
-            PixelShaderElement::new(
-                Self::get(renderer).default.clone(),
-                geo,
-                None,
-                1.0,
-                vec![
-                    Uniform::new("startColor", CONFIG.borders.start_color),
-                    Uniform::new(
-                        "endColor",
-                        CONFIG
-                            .borders
-                            .end_color
-                            .unwrap_or(CONFIG.borders.start_color),
-                    ),
-                    Uniform::new("thickness", thickness),
-                    Uniform::new("angle", CONFIG.borders.gradient_angle),
-                ],
-            )
+            let elem = if CONFIG.borders.radius > 0.0 {
+                PixelShaderElement::new(
+                    Self::get(renderer).rounded.clone(),
+                    geo,
+                    None,
+                    1.0,
+                    vec![
+                        Uniform::new("startColor", CONFIG.borders.start_color),
+                        Uniform::new(
+                            "endColor",
+                            CONFIG
+                                .borders
+                                .end_color
+                                .unwrap_or(CONFIG.borders.start_color),
+                        ),
+                        Uniform::new("thickness", thickness),
+                        Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
+                        Uniform::new("angle", CONFIG.borders.gradient_angle),
+                    ],
+                )
+            } else {
+                PixelShaderElement::new(
+                    Self::get(renderer).default.clone(),
+                    geo,
+                    None,
+                    1.0,
+                    vec![
+                        Uniform::new("startColor", CONFIG.borders.start_color),
+                        Uniform::new(
+                            "endColor",
+                            CONFIG
+                                .borders
+                                .end_color
+                                .unwrap_or(CONFIG.borders.start_color),
+                        ),
+                        Uniform::new("thickness", thickness),
+                        Uniform::new("angle", CONFIG.borders.gradient_angle),
+                    ],
+                )
+            };
+            elements.insert(window.clone(), elem.clone());
+            elem
         }
+    }
+    pub fn cleanup(renderer: &mut GlesRenderer) {
+        let elements = &mut renderer
+            .egl_context()
+            .user_data()
+            .get::<BorderShaderElements>()
+            .expect("Border Shader not initialized")
+            .0
+            .borrow_mut();
+        elements.retain(|w, _| w.alive())
     }
 }

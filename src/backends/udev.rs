@@ -854,6 +854,7 @@ impl MagmaState<UdevData> {
                 |_, _| Some(output.clone()),
             );
         });
+        BorderShader::cleanup(renderer.as_mut());
         result
     }
 }
