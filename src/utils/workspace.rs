@@ -75,6 +75,9 @@ impl Workspace {
             && (min_size.w == max_size.w || min_size.h == max_size.h))
             || parent
         {
+            let mw = window.borrow().rec;
+            let os = self.outputs.iter().next().unwrap().current_mode().unwrap().size.to_logical(1);
+            window.borrow_mut().rec.loc =  Point::from((os.w / 2 - mw.size.w / 2, os.h / 2 - mw.size.h / 2));
             self.floating.push(window);
         } else {
             self.layout_tree
