@@ -146,7 +146,11 @@ impl BinaryTree {
         }
     }
 
-    fn update_ratio(&mut self, new_ratio: f32) {
+    // Updates the size ratio of split nodes
+    // If increment is set to `None`, it will completely change the ratio to `new-ratio`
+    // If increment is `Some` and set to true, the ratio will be incremented by the `new_ratio`
+    // If increment is `Some` and set to false, the ratio will be decremented by the `new_ratio`
+    pub fn update_ratio(&mut self, new_ratio: f32, increment: Option<bool>) {
         match self {
             BinaryTree::Empty => {}
             BinaryTree::Window(_) => {}
@@ -157,9 +161,21 @@ impl BinaryTree {
                 left: _,
                 right,
             } => {
-                *ratio = new_ratio;
+                match increment {
+                    Some(increment) => {
+                        if increment {
+                            *ratio += new_ratio;
+                        } else {
+                            *ratio -= new_ratio;
+                        }
+                    }
+                    None => {
+                        *ratio = new_ratio;
+                    }
+                }
                 *counter_ratio = 1.0f32 - *ratio;
-                if let BinaryTree::Split {
+
+                /*if let BinaryTree::Split {
                     split: _,
                     ratio: _,
                     left: _,
@@ -167,8 +183,12 @@ impl BinaryTree {
                     counter_ratio: _,
                 } = right.as_ref()
                 {
-                    right.update_ratio(new_ratio);
-                };
+                    if increment.is_some() {
+                        right.update_ratio(new_ratio, Some(!increment.unwrap()));
+                    } else {
+                        right.update_ratio(new_ratio, increment);
+                    }
+                };*/
             }
         }
     }

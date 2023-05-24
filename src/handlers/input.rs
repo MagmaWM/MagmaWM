@@ -19,7 +19,7 @@ use crate::{
     backends::udev::UdevData,
     config::Action,
     state::{Backend, MagmaState, CONFIG},
-    utils::focus::FocusTarget,
+    utils::{focus::FocusTarget, tiling::bsp_update_layout},
 };
 
 impl MagmaState<UdevData> {
@@ -306,6 +306,20 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 {
                     info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
                 }
+            }
+            Action::DecreaseTileRatio => {
+                self.workspaces
+                    .current_mut()
+                    .layout_tree
+                    .update_ratio(CONFIG.tile_ratio_update_interval, Some(false));
+                bsp_update_layout(self.workspaces.current_mut())
+            }
+            Action::IncreaseTileRatio => {
+                self.workspaces
+                    .current_mut()
+                    .layout_tree
+                    .update_ratio(CONFIG.tile_ratio_update_interval, Some(true));
+                bsp_update_layout(self.workspaces.current_mut())
             }
             Action::VTSwitch(_) => {
                 info!("VTSwitch is not used in Winit backend.")

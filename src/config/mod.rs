@@ -93,6 +93,22 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_a,
+        },
+        Action::DecreaseTileRatio,
+    );
+
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
+            key: xkb::KEY_d,
+        },
+        Action::IncreaseTileRatio,
+    );
+
+    keybinding_map.insert(
+        KeyPattern {
+            modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
             key: xkb::KEY_1,
         },
         Action::Workspace(0),
@@ -221,6 +237,8 @@ pub enum Action {
     MoveWindow(u8),
     MoveAndSwitch(u8),
     ToggleWindowFloating,
+    IncreaseTileRatio,
+    DecreaseTileRatio,
     VTSwitch(i32),
     Spawn(String),
 }
