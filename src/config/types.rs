@@ -1,3 +1,4 @@
+use colors_transform::{Color, Rgb};
 use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use smithay::input::keyboard::{
     keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
@@ -137,5 +138,59 @@ impl<'a> From<&'a XkbConfig> for WlXkbConfig<'a> {
             variant: &val.variant,
             options: val.options.clone(),
         }
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn deserialize_StartColour<'de, D>(deserializer: D) -> Result<[f32; 3], D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+
+    let hex = String::deserialize(deserializer)?;
+    let rgb = Rgb::from_hex_str(&hex)
+        .map_err(|err| <D::Error as Error>::custom(err.message))?
+        .as_tuple();
+    Ok([rgb.0 / 255.0, rgb.1 / 255.0, rgb.2 / 255.0])
+}
+
+#[allow(non_snake_case)]
+pub fn serialize_StartColour<S>(rgb: &[f32; 3], serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(
+        &Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string(),
+    )
+}
+
+#[allow(non_snake_case)]
+pub fn deserialize_EndColour<'de, D>(deserializer: D) -> Result<Option<[f32; 3]>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    use serde::de::Error;
+    if let Some(hex) = Option::<String>::deserialize(deserializer)? {
+        let rgb = Rgb::from_hex_str(&hex)
+            .map_err(|err| <D::Error as Error>::custom(err.message))?
+            .as_tuple();
+        Ok(Some([rgb.0 / 255.0, rgb.1 / 255.0, rgb.2 / 255.0]))
+    } else {
+        Ok(None)
+    }
+}
+
+#[allow(non_snake_case)]
+pub fn serialize_EndColour<S>(rgb: &Option<[f32; 3]>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    if let Some(rgb) = rgb {
+        serializer.serialize_some(
+            &Rgb::from(rgb[0] * 255.0, rgb[1] * 255.0, rgb[2] * 255.0).to_css_hex_string(),
+        )
+    } else {
+        serializer.serialize_none()
     }
 }
