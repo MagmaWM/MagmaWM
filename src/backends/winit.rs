@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use smithay::{
     backend::{
-        renderer::{damage::OutputDamageTracker, element::AsRenderElements, gles::GlesRenderer},
+        renderer::{damage::OutputDamageTracker, element::AsRenderElements, glow::GlowRenderer},
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
@@ -20,7 +20,7 @@ use smithay::{
 use tracing::info;
 
 pub struct WinitData {
-    backend: WinitGraphicsBackend<GlesRenderer>,
+    backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
 }
 
@@ -176,7 +176,7 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<CustomRenderElements<_>>(
+                AsRenderElements::<GlowRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
@@ -196,7 +196,7 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<CustomRenderElements<_>>(
+                AsRenderElements::<GlowRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
