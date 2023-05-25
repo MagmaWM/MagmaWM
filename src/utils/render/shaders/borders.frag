@@ -2,21 +2,19 @@ precision mediump float;
 uniform vec2 size;
 varying vec2 v_coords;
 
-uniform float angle;
+uniform vec2 gradientDirection;
 uniform vec3 startColor;
 uniform vec3 endColor;
 uniform float thickness;
+uniform float halfThickness;
 
 void main() {
     vec2 center = size / 2.0 - vec2(0.5);
     vec2 location = v_coords * size;
     vec4 mix_color;
 
-    float halfThickness = thickness * 0.5;
     float distance = max(abs(location.x - center.x) - (size.x / 2.0 - halfThickness), abs(location.y - center.y) - (size.y / 2.0 - halfThickness));
     float smoothedAlpha = 1.0 - smoothstep(0.0, 1.0, abs(distance) - (halfThickness));
-
-    vec2 gradientDirection = vec2(cos(angle), sin(angle));
 
     float dotProduct = dot(v_coords, gradientDirection);
 

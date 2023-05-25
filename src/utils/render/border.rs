@@ -32,8 +32,9 @@ impl BorderShader {
                     UniformName::new("startColor", UniformType::_3f),
                     UniformName::new("endColor", UniformType::_3f),
                     UniformName::new("thickness", UniformType::_1f),
+                    UniformName::new("halfThickness", UniformType::_1f),
                     UniformName::new("radius", UniformType::_1f),
-                    UniformName::new("angle", UniformType::_1f),
+                    UniformName::new("gradientDirection", UniformType::_2f),
                 ],
             )
             .unwrap();
@@ -44,7 +45,8 @@ impl BorderShader {
                     UniformName::new("startColor", UniformType::_3f),
                     UniformName::new("endColor", UniformType::_3f),
                     UniformName::new("thickness", UniformType::_1f),
-                    UniformName::new("angle", UniformType::_1f),
+                    UniformName::new("halfThickness", UniformType::_1f),
+                    UniformName::new("gradientDirection", UniformType::_2f),
                 ],
             )
             .unwrap();
@@ -89,6 +91,8 @@ impl BorderShader {
             }
             elem.clone()
         } else {
+            let angle = CONFIG.borders.gradient_angle * std::f32::consts::PI;
+            let gradient_direction = [angle.cos(), angle.sin()];
             let elem = if CONFIG.borders.radius > 0.0 {
                 PixelShaderElement::new(
                     Self::get(renderer).rounded.clone(),
@@ -105,8 +109,9 @@ impl BorderShader {
                                 .unwrap_or(CONFIG.borders.start_color),
                         ),
                         Uniform::new("thickness", thickness),
+                        Uniform::new("halfThickness", thickness * 0.5),
                         Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
-                        Uniform::new("angle", CONFIG.borders.gradient_angle * std::f32::consts::PI),
+                        Uniform::new("gradientDirection", gradient_direction),
                     ],
                 )
             } else {
@@ -125,10 +130,8 @@ impl BorderShader {
                                 .unwrap_or(CONFIG.borders.start_color),
                         ),
                         Uniform::new("thickness", thickness),
-                        Uniform::new(
-                            "angle",
-                            CONFIG.borders.gradient_angle * std::f32::consts::PI,
-                        ),
+                        Uniform::new("halfThickness", thickness * 0.5),
+                        Uniform::new("gradientDirection", gradient_direction),
                     ],
                 )
             };
