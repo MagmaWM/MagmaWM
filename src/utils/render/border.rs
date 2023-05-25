@@ -106,7 +106,7 @@ impl BorderShader {
                         ),
                         Uniform::new("thickness", thickness),
                         Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
-                        Uniform::new("angle", CONFIG.borders.gradient_angle),
+                        Uniform::new("angle", CONFIG.borders.gradient_angle * std::f32::consts::PI),
                     ],
                 )
             } else {
