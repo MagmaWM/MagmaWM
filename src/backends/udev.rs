@@ -20,7 +20,8 @@ use smithay::{
                 texture::{TextureBuffer, TextureRenderElement},
                 AsRenderElements,
             },
-            gles::{GlesRenderer, GlesTexture},
+            gles::GlesTexture,
+            glow::GlowRenderer,
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
             Bind, BufferType, ExportMem, Offscreen,
         },
@@ -78,7 +79,7 @@ pub type GbmDrmCompositor =
 pub struct UdevData {
     pub session: LibSeatSession,
     _primary_gpu: DrmNode,
-    gpus: GpuManager<GbmGlesBackend<GlesRenderer>>,
+    gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
     devices: HashMap<DrmNode, Device>,
 }
 
