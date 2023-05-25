@@ -125,7 +125,10 @@ impl BorderShader {
                                 .unwrap_or(CONFIG.borders.start_color),
                         ),
                         Uniform::new("thickness", thickness),
-                        Uniform::new("angle", CONFIG.borders.gradient_angle * 3.14),
+                        Uniform::new(
+                            "angle",
+                            CONFIG.borders.gradient_angle * std::f32::consts::PI,
+                        ),
                     ],
                 )
             };
