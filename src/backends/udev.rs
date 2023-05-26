@@ -645,6 +645,7 @@ impl MagmaState<UdevData> {
                 self.egui
                     .global_ui(
                         Some(&node),
+                        output,
                         &self.seat,
                         renderer.as_mut(),
                         Rectangle::from_loc_and_size(

@@ -14,6 +14,7 @@ use smithay::{
         },
     },
     input::{keyboard::xkb, Seat},
+    output::Output,
     reexports::wayland_server::Resource,
     utils::{Logical, Rectangle, Transform},
     wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
@@ -146,6 +147,7 @@ impl MagmaEgui {
     pub fn global_ui<BackendData: Backend>(
         &mut self,
         gpu: Option<&DrmNode>,
+        output: &Output,
         seat: &Seat<MagmaState<BackendData>>,
         renderer: &mut GlowRenderer,
         area: Rectangle<i32, Logical>,
@@ -167,24 +169,31 @@ impl MagmaEgui {
                         }
                         ui.set_max_width(300.0);
                         ui.separator();
-
                         if let Some(gpu) = gpu {
-                            ui.horizontal(|ui| {
-                                ui.label(format!("gpu: {}", gpu));
-                                if let Ok(vendor) = std::fs::read_to_string(format!(
-                                    "/sys/class/drm/{}/device/vendor",
-                                    gpu
-                                )) {
-                                    ui.label(format!(
-                                        "Vendor: {}",
-                                        VENDORS
-                                            .iter()
-                                            .find(|v| v.0 == vendor.trim())
-                                            .and_then(|v| Some(v.1))
-                                            .unwrap_or(&"Unknown")
-                                    ));
-                                }
-                            });
+                            ui.label(egui::RichText::new(format!("gpu: {}", gpu)).strong());
+                            if let Ok(vendor) = std::fs::read_to_string(format!(
+                                "/sys/class/drm/{}/device/vendor",
+                                gpu
+                            )) {
+                                ui.label(egui::RichText::new(format!(
+                                    "Vendor: {}",
+                                    VENDORS
+                                        .iter()
+                                        .find(|v| v.0 == vendor.trim())
+                                        .and_then(|v| Some(v.1))
+                                        .unwrap_or(&"Unknown")
+                                )));
+                            }
+                            ui.label(format!(
+                                "Resolution: {}x{}",
+                                output.current_mode().unwrap().size.w,
+                                output.current_mode().unwrap().size.h
+                            ));
+                            ui.label(format!(
+                                "Refresh Rate: {}hz",
+                                output.current_mode().unwrap().refresh / 1000
+                            ));
+                            ui.separator();
                         }
                         ui.label(egui::RichText::new(format!("\t{}", seat.name())).strong());
                         if let Some(ptr) = seat.get_pointer() {
@@ -290,8 +299,10 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
                         .unwrap_or_default()
                 })
             ),
-            FocusTarget::LayerSurface(l) => format!("LayerSurface {}", l.wl_surface().id().protocol_id()),
-            FocusTarget::Popup(p) =>  format!("Popup {}", p.wl_surface().id().protocol_id()),
+            FocusTarget::LayerSurface(l) => {
+                format!("LayerSurface {}", l.wl_surface().id().protocol_id())
+            }
+            FocusTarget::Popup(p) => format!("Popup {}", p.wl_surface().id().protocol_id()),
         }
     } else {
         format!("None")

@@ -166,6 +166,7 @@ pub fn winit_dispatch(
                 .egui
                 .global_ui(
                     None,
+                    output,
                     &state.seat,
                     winitdata.backend.renderer(),
                     Rectangle::from_loc_and_size(
