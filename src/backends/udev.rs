@@ -22,7 +22,7 @@ use smithay::{
             },
             gles::GlesTexture,
             glow::GlowRenderer,
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer},
             Bind, BufferType, ExportMem, Offscreen,
         },
         session::{libseat::LibSeatSession, Event as SessionEvent, Session},
@@ -103,7 +103,7 @@ pub struct Surface {
     global: GlobalId,
     compositor: GbmDrmCompositor,
     output: Output,
-    pointer_texture: TextureBuffer<MultiTexture>,
+    pointer_texture: TextureBuffer<GlesTexture>,
 }
 
 pub fn init_udev() {
@@ -566,7 +566,7 @@ impl MagmaState<UdevData> {
                 .unwrap();
 
                 let pointer_texture = TextureBuffer::from_memory(
-                    &mut renderer,
+                    renderer.as_mut(),
                     CURSOR_DATA,
                     Fourcc::Abgr8888,
                     (64, 64),
@@ -639,7 +639,18 @@ impl MagmaState<UdevData> {
                 ),
             ]);
         }
-
+        #[cfg(feature = "debug")]
+        renderelements.push(
+            self.egui
+                .render(
+                    renderer.as_mut(),
+                    Rectangle::from_loc_and_size((0, 0), (800, 600)),
+                    1,
+                    0.8,
+                )
+                .unwrap()
+                .into(),
+        );
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()

@@ -9,6 +9,8 @@ use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 mod backends;
 mod config;
+#[cfg(feature = "debug")]
+mod debug;
 mod handlers;
 mod protocols;
 mod state;

@@ -159,6 +159,20 @@ pub fn winit_dispatch(
     winitdata.backend.bind().unwrap();
 
     let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
+    // DOESNT WORK YET
+    // #[cfg(feature = "debug")]
+    // renderelements.push(
+    //     state
+    //         .egui
+    //         .render(
+    //             winitdata.backend.renderer(),
+    //             Rectangle::from_loc_and_size((0, 0), (800, 600)),
+    //             1,
+    //             1.0,
+    //         )
+    //         .unwrap()
+    //         .into(),
+    // );
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
     let layer_map = layer_map_for_output(output);
