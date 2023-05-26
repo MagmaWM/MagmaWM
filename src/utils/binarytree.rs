@@ -159,7 +159,7 @@ impl BinaryTree {
                 ratio,
                 counter_ratio,
                 left: _,
-                right,
+                right: _,
             } => {
                 match increment {
                     Some(increment) => {

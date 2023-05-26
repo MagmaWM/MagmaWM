@@ -44,7 +44,7 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
             right,
             split,
             ratio,
-            counter_ratio,
+            counter_ratio: _,
         } => {
             if let BinaryTree::Window(w) = left.as_mut() {
                 generate_layout(
@@ -84,7 +84,7 @@ pub fn generate_layout(
     output: Size<i32, Physical>,
     gaps: (i32, i32),
 ) {
-    let size = match split {
+    let size: Size<i32, Logical> = match split {
         HorizontalOrVertical::Horizontal => {
             Size::from(((lastgeo.size.w as f32 * ratio) as i32, lastgeo.size.h))
         }
@@ -106,15 +106,16 @@ pub fn generate_layout(
     lastwin.borrow_mut().rec = recgapped;
     let counter_ratio = 1.0f32 - ratio;
     let size = match split {
-        HorizontalOrVertical::Horizontal => {
-            Size::from(((lastgeo.size.w as f32 * counter_ratio) as i32, lastgeo.size.h))
-
-        }
-        HorizontalOrVertical::Vertical => {
-            Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * counter_ratio) as i32))
-        }
+        HorizontalOrVertical::Horizontal => Size::from((
+            (lastgeo.size.w as f32 * counter_ratio) as i32,
+            lastgeo.size.h,
+        )),
+        HorizontalOrVertical::Vertical => Size::from((
+            lastgeo.size.w,
+            (lastgeo.size.h as f32 * counter_ratio) as i32,
+        )),
     };
-    
+
     let loc = match split {
         HorizontalOrVertical::Horizontal => Point::from((output.w - size.w, lastgeo.loc.y)),
         HorizontalOrVertical::Vertical => Point::from((lastgeo.loc.x, output.h - size.h)),
@@ -130,7 +131,7 @@ pub fn generate_layout(
         BinaryTree::Window(w) => w.borrow_mut().rec = recgapped,
         BinaryTree::Split {
             split,
-            ratio,
+            ratio: _,
             counter_ratio,
             left,
             right,
