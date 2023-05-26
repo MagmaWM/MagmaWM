@@ -5,6 +5,7 @@ use egui_glow::Painter;
 use smithay::{
     backend::{
         allocator::Fourcc,
+        drm::DrmNode,
         renderer::{
             element::texture::{TextureRenderBuffer, TextureRenderElement},
             gles::{GlesError, GlesTexture},
@@ -12,8 +13,17 @@ use smithay::{
             Bind, Frame, Offscreen, Renderer, Unbind,
         },
     },
+    input::{keyboard::xkb, Seat},
+    reexports::wayland_server::Resource,
     utils::{Logical, Rectangle, Transform},
+    wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
+
+use crate::{
+    state::{Backend, MagmaState},
+    utils::focus::FocusTarget,
+};
+const VENDORS: [(&str, &str); 3] = [("0x10de", "nvidia"), ("0x1002", "amd"), ("0x8086", "intel")];
 
 struct GlState {
     painter: Painter,
@@ -30,6 +40,7 @@ pub struct MagmaEgui {
 impl MagmaEgui {
     pub fn render(
         &mut self,
+        ui: impl FnOnce(&Context),
         renderer: &mut GlowRenderer,
         area: Rectangle<i32, Logical>,
         scale: i32,
@@ -88,7 +99,7 @@ impl MagmaEgui {
             shapes,
             textures_delta,
             ..
-        } = self.ctx.run(input, MagmaEgui::ui);
+        } = self.ctx.run(input, ui);
 
         render_buffer.render().draw(|tex| {
             renderer.bind(tex.clone())?;
@@ -132,17 +143,157 @@ impl MagmaEgui {
         ))
     }
 
-    fn ui(ctx: &Context) {
-        egui::Area::new("main")
-            .anchor(egui::Align2::LEFT_TOP, (10.0, 10.0))
-            .show(ctx, |ui| {
-                ui.label(format!(
-                    "MagmaWM version {}",
-                    std::env!("CARGO_PKG_VERSION")
-                ));
-                if let Some(hash) = std::option_env!("GIT_HASH").and_then(|x| x.get(0..10)) {
-                    ui.label(format!("git: {hash}"));
-                }
-            });
+    pub fn global_ui<BackendData: Backend>(
+        &mut self,
+        gpu: Option<&DrmNode>,
+        seat: &Seat<MagmaState<BackendData>>,
+        renderer: &mut GlowRenderer,
+        area: Rectangle<i32, Logical>,
+        scale: i32,
+        alpha: f32,
+    ) -> Result<TextureRenderElement<GlesTexture>, GlesError> {
+        self.render(
+            |ctx| {
+                egui::Area::new("main")
+                    .anchor(egui::Align2::LEFT_TOP, (10.0, 10.0))
+                    .show(ctx, |ui| {
+                        ui.label(format!(
+                            "MagmaWM version {}",
+                            std::env!("CARGO_PKG_VERSION")
+                        ));
+                        if let Some(hash) = std::option_env!("GIT_HASH").and_then(|x| x.get(0..10))
+                        {
+                            ui.label(format!("git: {hash}"));
+                        }
+                        ui.set_max_width(300.0);
+                        ui.separator();
+
+                        if let Some(gpu) = gpu {
+                            ui.horizontal(|ui| {
+                                ui.label(format!("gpu: {}", gpu));
+                                if let Ok(vendor) = std::fs::read_to_string(format!(
+                                    "/sys/class/drm/{}/device/vendor",
+                                    gpu
+                                )) {
+                                    ui.label(format!(
+                                        "Vendor: {}",
+                                        VENDORS
+                                            .iter()
+                                            .find(|v| v.0 == vendor.trim())
+                                            .and_then(|v| Some(v.1))
+                                            .unwrap_or(&"Unknown")
+                                    ));
+                                }
+                            });
+                        }
+                        ui.label(egui::RichText::new(format!("\t{}", seat.name())).strong());
+                        if let Some(ptr) = seat.get_pointer() {
+                            egui::Frame::none()
+                                .fill(egui::Color32::DARK_GRAY)
+                                .rounding(5.)
+                                .inner_margin(10.)
+                                .show(ui, |ui| {
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Pos: {:?}",
+                                            ptr.current_location()
+                                        ))
+                                        .code(),
+                                    );
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Focus: {}",
+                                            format_focus(ptr.current_focus())
+                                        ))
+                                        .code(),
+                                    );
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Grabbed: {:?}",
+                                            ptr.is_grabbed()
+                                        ))
+                                        .code(),
+                                    );
+                                });
+                        }
+                        if let Some(kbd) = seat.get_keyboard() {
+                            egui::Frame::none()
+                                .fill(egui::Color32::DARK_GRAY)
+                                .rounding(5.)
+                                .inner_margin(10.)
+                                .show(ui, |ui| {
+                                    let mut keysyms = "".to_string();
+                                    kbd.with_pressed_keysyms(|syms| {
+                                        keysyms = format!(
+                                            "Keys: {}",
+                                            syms.into_iter()
+                                                .map(|k| xkb::keysym_get_name(k.modified_sym()))
+                                                .fold(String::new(), |mut list, val| {
+                                                    list.push_str(&format!("{}, ", val));
+                                                    list
+                                                })
+                                        )
+                                    });
+                                    keysyms.truncate(keysyms.len().saturating_sub(2));
+                                    ui.label(egui::RichText::new(keysyms).code());
+
+                                    let mods = kbd.modifier_state();
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Mods: Ctrl {} / Alt {} / Logo {} / Shift {}",
+                                            mods.ctrl, mods.alt, mods.logo, mods.shift,
+                                        ))
+                                        .code(),
+                                    );
+
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Focus: {}",
+                                            format_focus(kbd.current_focus())
+                                        ))
+                                        .code(),
+                                    );
+                                    ui.label(
+                                        egui::RichText::new(format!(
+                                            "Grabbed: {:?}",
+                                            kbd.is_grabbed()
+                                        ))
+                                        .code(),
+                                    );
+                                });
+                        }
+                    });
+            },
+            renderer,
+            area,
+            scale,
+            alpha,
+        )
+    }
+}
+
+fn format_focus(focus: Option<FocusTarget>) -> String {
+    if let Some(focus) = focus {
+        match focus {
+            FocusTarget::Window(w) => format!(
+                "Window {} ({})",
+                w.toplevel().wl_surface().id().protocol_id(),
+                with_states(w.toplevel().wl_surface(), |states| {
+                    states
+                        .data_map
+                        .get::<XdgToplevelSurfaceData>()
+                        .unwrap()
+                        .lock()
+                        .unwrap()
+                        .title
+                        .clone()
+                        .unwrap_or_default()
+                })
+            ),
+            FocusTarget::LayerSurface(l) => format!("LayerSurface {}", l.wl_surface().id().protocol_id()),
+            FocusTarget::Popup(p) =>  format!("Popup {}", p.wl_surface().id().protocol_id()),
+        }
+    } else {
+        format!("None")
     }
 }
