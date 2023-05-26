@@ -15,7 +15,7 @@ use smithay::{
     },
     utils::{Logical, Point},
     wayland::{
-        compositor::CompositorState,
+        compositor::{CompositorClientState, CompositorState},
         data_device::DataDeviceState,
         output::OutputManagerState,
         primary_selection::PrimarySelectionState,
@@ -150,7 +150,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 state
                     .display
                     .handle()
-                    .insert_client(client_stream, Arc::new(ClientState))
+                    .insert_client(client_stream, Arc::new(ClientState::default()))
                     .unwrap();
             })
             .expect("Failed to init the wayland event source.");
@@ -209,7 +209,10 @@ impl<BackendData: Backend> MagmaState<BackendData> {
     }
 }
 
-pub struct ClientState;
+#[derive(Default)]
+pub struct ClientState {
+    pub compositor_state: CompositorClientState,
+}
 impl ClientData for ClientState {
     fn initialized(&self, _client_id: ClientId) {}
     fn disconnected(&self, _client_id: ClientId, _reason: DisconnectReason) {}

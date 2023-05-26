@@ -181,6 +181,7 @@ pub fn winit_dispatch(
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
                     Scale::from(1.0),
+                    1.0,
                 )
             }),
     );
@@ -201,6 +202,7 @@ pub fn winit_dispatch(
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
                     Scale::from(1.0),
+                    1.0,
                 )
             }),
     );

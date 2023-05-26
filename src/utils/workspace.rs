@@ -112,6 +112,7 @@ impl Workspace {
                 renderer,
                 element.borrow().render_location().to_physical(1),
                 Scale::from(1.0),
+                1.0,
             ));
         }
         render_elements

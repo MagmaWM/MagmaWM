@@ -662,6 +662,7 @@ impl MagmaState<UdevData> {
                         &mut renderer,
                         loc.to_physical_precise_round(1),
                         Scale::from(1.0),
+                        1.0,
                     )
                     .into_iter()
                     .map(CustomRenderElements::Surface)
@@ -686,6 +687,7 @@ impl MagmaState<UdevData> {
                         &mut renderer,
                         loc.to_physical_precise_round(1),
                         Scale::from(1.0),
+                        1.0,
                     )
                     .into_iter()
                     .map(CustomRenderElements::Surface)
