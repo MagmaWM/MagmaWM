@@ -104,7 +104,17 @@ pub fn generate_layout(
     };
 
     lastwin.borrow_mut().rec = recgapped;
+    let counter_ratio = 1.0f32 - ratio;
+    let size = match split {
+        HorizontalOrVertical::Horizontal => {
+            Size::from(((lastgeo.size.w as f32 * counter_ratio) as i32, lastgeo.size.h))
 
+        }
+        HorizontalOrVertical::Vertical => {
+            Size::from((lastgeo.size.w, (lastgeo.size.h as f32 * counter_ratio) as i32))
+        }
+    };
+    
     let loc = match split {
         HorizontalOrVertical::Horizontal => Point::from((output.w - size.w, lastgeo.loc.y)),
         HorizontalOrVertical::Vertical => Point::from((lastgeo.loc.x, output.h - size.h)),
