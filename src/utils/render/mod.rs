@@ -4,7 +4,8 @@ use smithay::{
             surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
             RenderElement,
         },
-        gles::{element::PixelShaderElement, GlesRenderer},
+        gles::element::PixelShaderElement,
+        glow::GlowRenderer,
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
         ImportAll, ImportMem, Renderer,
@@ -14,9 +15,9 @@ use smithay::{
 pub mod border;
 
 pub type GlMultiRenderer<'a, 'b> =
-    MultiRenderer<'a, 'a, 'b, GbmGlesBackend<GlesRenderer>, GbmGlesBackend<GlesRenderer>>;
+    MultiRenderer<'a, 'a, 'b, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
 pub type GlMultiFrame<'a, 'b, 'frame> =
-    MultiFrame<'a, 'a, 'b, 'frame, GbmGlesBackend<GlesRenderer>, GbmGlesBackend<GlesRenderer>>;
+    MultiFrame<'a, 'a, 'b, 'frame, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
 pub enum CustomRenderElements<R>
 where
     R: Renderer,
@@ -117,7 +118,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
             }
             CustomRenderElements::Surface(elem) => elem.draw(frame, src, dst, damage),
             CustomRenderElements::Shader(elem) => {
-                RenderElement::<GlesRenderer>::draw(elem, frame.as_mut(), src, dst, damage)
+                RenderElement::<GlowRenderer>::draw(elem, frame.as_mut(), src, dst, damage)
                     .map_err(MultiError::Render)
             }
         }
@@ -135,21 +136,21 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
     }
 }
 
-impl RenderElement<GlesRenderer> for CustomRenderElements<GlesRenderer> {
+impl RenderElement<GlowRenderer> for CustomRenderElements<GlowRenderer> {
     fn draw(
         &self,
-        frame: &mut <GlesRenderer as Renderer>::Frame<'_>,
+        frame: &mut <GlowRenderer as Renderer>::Frame<'_>,
         src: Rectangle<f64, Buffer>,
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
-    ) -> Result<(), <GlesRenderer as Renderer>::Error> {
+    ) -> Result<(), <GlowRenderer as Renderer>::Error> {
         match self {
             CustomRenderElements::Texture(elem) => {
-                RenderElement::<GlesRenderer>::draw(elem, frame, src, dst, damage)
+                RenderElement::<GlowRenderer>::draw(elem, frame, src, dst, damage)
             }
             CustomRenderElements::Surface(elem) => elem.draw(frame, src, dst, damage),
             CustomRenderElements::Shader(elem) => {
-                RenderElement::<GlesRenderer>::draw(elem, frame, src, dst, damage)
+                RenderElement::<GlowRenderer>::draw(elem, frame, src, dst, damage)
             }
         }
     }
@@ -181,30 +182,30 @@ where
     }
 }
 
-pub trait AsGlesRenderer
+pub trait AsGlowRenderer
 where
     Self: Renderer,
 {
-    fn gles_renderer(&self) -> &GlesRenderer;
-    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer;
+    fn glow_renderer(&self) -> &GlowRenderer;
+    fn glow_renderer_mut(&mut self) -> &mut GlowRenderer;
 }
 
-impl AsGlesRenderer for GlesRenderer {
-    fn gles_renderer(&self) -> &GlesRenderer {
+impl AsGlowRenderer for GlowRenderer {
+    fn glow_renderer(&self) -> &GlowRenderer {
         self
     }
 
-    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer {
+    fn glow_renderer_mut(&mut self) -> &mut GlowRenderer {
         self
     }
 }
 
-impl<'a, 'b> AsGlesRenderer for GlMultiRenderer<'a, 'b> {
-    fn gles_renderer(&self) -> &GlesRenderer {
+impl<'a, 'b> AsGlowRenderer for GlMultiRenderer<'a, 'b> {
+    fn glow_renderer(&self) -> &GlowRenderer {
         self.as_ref()
     }
 
-    fn gles_renderer_mut(&mut self) -> &mut GlesRenderer {
+    fn glow_renderer_mut(&mut self) -> &mut GlowRenderer {
         self.as_mut()
     }
 }

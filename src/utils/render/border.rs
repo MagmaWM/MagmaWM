@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap};
+use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap};
 
 use smithay::{
     backend::renderer::{
@@ -7,6 +7,7 @@ use smithay::{
             element::PixelShaderElement, GlesPixelProgram, GlesRenderer, Uniform, UniformName,
             UniformType,
         },
+        glow::GlowRenderer,
     },
     desktop::Window,
     utils::{IsAlive, Logical, Point, Rectangle, Size},
@@ -24,7 +25,8 @@ pub struct BorderShader {
 struct BorderShaderElements(RefCell<HashMap<Window, PixelShaderElement>>);
 
 impl BorderShader {
-    pub fn init(renderer: &mut GlesRenderer) {
+    pub fn init(renderer: &mut GlowRenderer) {
+        let renderer: &mut GlesRenderer = renderer.borrow_mut();
         let rounded = renderer
             .compile_custom_pixel_shader(
                 ROUNDED_BORDER_FRAG,
@@ -59,7 +61,7 @@ impl BorderShader {
             .user_data()
             .insert_if_missing(|| BorderShaderElements(RefCell::new(HashMap::new())));
     }
-    pub fn get(renderer: &GlesRenderer) -> &BorderShader {
+    pub fn get(renderer: &GlowRenderer) -> &BorderShader {
         renderer
             .egl_context()
             .user_data()
@@ -67,7 +69,7 @@ impl BorderShader {
             .expect("Border Shader not initialized")
     }
     pub fn element(
-        renderer: &mut GlesRenderer,
+        renderer: &mut GlowRenderer,
         window: &Window,
         loc: Point<i32, Logical>,
     ) -> PixelShaderElement {
@@ -139,7 +141,7 @@ impl BorderShader {
             elem
         }
     }
-    pub fn cleanup(renderer: &mut GlesRenderer) {
+    pub fn cleanup(renderer: &mut GlowRenderer) {
         let elements = &mut renderer
             .egl_context()
             .user_data()

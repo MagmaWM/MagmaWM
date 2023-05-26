@@ -27,6 +27,7 @@ features = [
     "backend_session_libseat",
     "backend_drm",
     "renderer_multi",
+    "renderer_glow",
     "backend_gbm",
     "backend_udev",
     "backend_libinput",
