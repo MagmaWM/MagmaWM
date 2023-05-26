@@ -268,7 +268,8 @@ impl<BackendData: Backend> MagmaState<BackendData> {
     pub fn handle_action(&mut self, action: Action) {
         match action {
             Action::Quit => self.loop_signal.stop(),
-            Action::Debug => todo!(),
+            #[cfg(feature = "debug")]
+            Action::Debug => self.egui.active = !self.egui.active,
             Action::Close => {
                 if let Some(d) = self
                     .workspaces

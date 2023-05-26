@@ -640,17 +640,22 @@ impl MagmaState<UdevData> {
             ]);
         }
         #[cfg(feature = "debug")]
-        renderelements.push(
-            self.egui
-                .render(
-                    renderer.as_mut(),
-                    Rectangle::from_loc_and_size((0, 0), (800, 600)),
-                    1,
-                    0.8,
-                )
-                .unwrap()
-                .into(),
-        );
+        if self.egui.active {
+            renderelements.push(
+                self.egui
+                    .render(
+                        renderer.as_mut(),
+                        Rectangle::from_loc_and_size(
+                            (0, 0),
+                            output.current_mode().unwrap().size.to_logical(1),
+                        ),
+                        1,
+                        0.8,
+                    )
+                    .unwrap()
+                    .into(),
+            );
+        }
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()

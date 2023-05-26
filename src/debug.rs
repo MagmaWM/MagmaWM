@@ -21,17 +21,13 @@ struct GlState {
 }
 type UserDataType = Rc<RefCell<GlState>>;
 
+#[derive(Default)]
 pub struct MagmaEgui {
     ctx: Context,
+    pub active: bool,
 }
 
 impl MagmaEgui {
-    pub fn new() -> Self {
-        Self {
-            ctx: Context::default(),
-        }
-    }
-
     pub fn render(
         &mut self,
         renderer: &mut GlowRenderer,
@@ -92,11 +88,7 @@ impl MagmaEgui {
             shapes,
             textures_delta,
             ..
-        } = self.ctx.run(input, |ctx| {
-            egui::CentralPanel::default().show(&ctx, |ui| {
-                ui.label("Hello egui!");
-            });
-        });
+        } = self.ctx.run(input, MagmaEgui::ui);
 
         render_buffer.render().draw(|tex| {
             renderer.bind(tex.clone())?;
@@ -133,10 +125,24 @@ impl MagmaEgui {
 
         Ok(TextureRenderElement::from_texture_render_buffer(
             area.loc.to_f64().to_physical(scale as f64),
-            &render_buffer,
+            render_buffer,
             Some(alpha),
             None,
             None,
         ))
+    }
+
+    fn ui(ctx: &Context) {
+        egui::Area::new("main")
+            .anchor(egui::Align2::LEFT_TOP, (10.0, 10.0))
+            .show(ctx, |ui| {
+                ui.label(format!(
+                    "MagmaWM version {}",
+                    std::env!("CARGO_PKG_VERSION")
+                ));
+                if let Some(hash) = std::option_env!("GIT_HASH").and_then(|x| x.get(0..10)) {
+                    ui.label(format!("git: {hash}"));
+                }
+            });
     }
 }

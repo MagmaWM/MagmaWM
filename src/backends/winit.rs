@@ -156,25 +156,27 @@ pub fn winit_dispatch(
     let size = winitdata.backend.window_size().physical_size;
     let damage = Rectangle::from_loc_and_size((0, 0), size);
 
-    winitdata.backend.bind().unwrap();
-
     let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
-    // DOESNT WORK YET
-    // #[cfg(feature = "debug")]
-    // renderelements.push(
-    //     state
-    //         .egui
-    //         .render(
-    //             winitdata.backend.renderer(),
-    //             Rectangle::from_loc_and_size((0, 0), (800, 600)),
-    //             1,
-    //             1.0,
-    //         )
-    //         .unwrap()
-    //         .into(),
-    // );
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
+    #[cfg(feature = "debug")]
+    if state.egui.active {
+        renderelements.push(
+            state
+                .egui
+                .render(
+                    winitdata.backend.renderer(),
+                    Rectangle::from_loc_and_size(
+                        (0, 0),
+                        output.current_mode().unwrap().size.to_logical(1),
+                    ),
+                    1,
+                    0.8,
+                )
+                .unwrap()
+                .into(),
+        );
+    }
     let layer_map = layer_map_for_output(output);
     let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
         .layers()
@@ -220,7 +222,7 @@ pub fn winit_dispatch(
                 )
             }),
     );
-
+    winitdata.backend.bind().unwrap();
     winitdata
         .damage_tracker
         .render_output(

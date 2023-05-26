@@ -136,7 +136,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
             #[cfg(feature = "debug")]
-            egui: MagmaEgui::new(),
+            egui: MagmaEgui::default(),
         }
     }
     fn init_wayland_listener(
