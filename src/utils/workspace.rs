@@ -18,7 +18,7 @@ use crate::state::CONFIG;
 
 use super::{
     binarytree::BinaryTree,
-    render::{border::BorderShader, AsGlesRenderer},
+    render::{border::BorderShader, AsGlowRenderer},
     tiling::bsp_update_layout,
 };
 
@@ -89,7 +89,7 @@ impl Workspace {
     }
 
     pub fn render_elements<
-        R: Renderer + ImportAll + AsGlesRenderer,
+        R: Renderer + ImportAll + AsGlowRenderer,
         C: From<WaylandSurfaceRenderElement<R>> + From<PixelShaderElement>,
     >(
         &self,
@@ -103,7 +103,7 @@ impl Workspace {
             let window = &element.borrow().window;
             if CONFIG.borders.thickness > 0 {
                 render_elements.push(C::from(BorderShader::element(
-                    renderer.gles_renderer_mut(),
+                    renderer.glow_renderer_mut(),
                     window,
                     element.borrow().rec.loc,
                 )));
@@ -112,6 +112,7 @@ impl Workspace {
                 renderer,
                 element.borrow().render_location().to_physical(1),
                 Scale::from(1.0),
+                1.0,
             ));
         }
         render_elements
