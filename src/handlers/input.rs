@@ -269,7 +269,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
         match action {
             Action::Quit => self.loop_signal.stop(),
             #[cfg(feature = "debug")]
-            Action::Debug => self.egui.active = !self.egui.active,
+            Action::Debug => self.debug.active = !self.debug.active,
             Action::Close => {
                 if let Some(d) = self
                     .workspaces

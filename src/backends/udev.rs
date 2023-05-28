@@ -640,9 +640,9 @@ impl MagmaState<UdevData> {
             ]);
         }
         #[cfg(feature = "debug")]
-        if self.egui.active {
+        if self.debug.active {
             renderelements.push(
-                self.egui
+                self.debug
                     .global_ui(
                         Some(&node),
                         output,

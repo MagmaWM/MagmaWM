@@ -33,12 +33,12 @@ struct GlState {
 type UserDataType = Rc<RefCell<GlState>>;
 
 #[derive(Default)]
-pub struct MagmaEgui {
+pub struct MagmaDebug {
     ctx: Context,
     pub active: bool,
 }
 
-impl MagmaEgui {
+impl MagmaDebug {
     pub fn render(
         &mut self,
         ui: impl FnOnce(&Context),

@@ -160,10 +160,10 @@ pub fn winit_dispatch(
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
     #[cfg(feature = "debug")]
-    if state.egui.active {
+    if state.debug.active {
         renderelements.push(
             state
-                .egui
+                .debug
                 .global_ui(
                     None,
                     output,

@@ -32,7 +32,7 @@ use tracing::warn;
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 use crate::{
     config::{load_config, Config},
-    debug::MagmaEgui,
+    debug::MagmaDebug,
 };
 
 pub struct CalloopData<BackendData: Backend + 'static> {
@@ -73,7 +73,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub pointer_location: Point<f64, Logical>,
 
     #[cfg(feature = "debug")]
-    pub egui: MagmaEgui,
+    pub debug: MagmaDebug,
 }
 
 impl<BackendData: Backend> MagmaState<BackendData> {
@@ -136,7 +136,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
             #[cfg(feature = "debug")]
-            egui: MagmaEgui::default(),
+            debug: MagmaDebug::default(),
         }
     }
     fn init_wayland_listener(
