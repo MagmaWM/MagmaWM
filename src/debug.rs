@@ -1,4 +1,9 @@
-use std::{cell::RefCell, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::VecDeque,
+    rc::Rc,
+    time::{Duration, Instant},
+};
 
 use egui::{Context, FullOutput};
 use egui_glow::Painter;
@@ -10,7 +15,7 @@ use smithay::{
             element::texture::{TextureRenderBuffer, TextureRenderElement},
             gles::{GlesError, GlesTexture},
             glow::GlowRenderer,
-            Bind, Frame, Offscreen, Renderer, Unbind,
+            Bind, Frame as RenderFrame, Offscreen, Renderer, Unbind,
         },
     },
     input::{keyboard::xkb, Seat},
@@ -36,6 +41,7 @@ type UserDataType = Rc<RefCell<GlState>>;
 pub struct MagmaDebug {
     ctx: Context,
     pub active: bool,
+    pub fps: Fps,
 }
 
 impl MagmaDebug {
@@ -154,6 +160,13 @@ impl MagmaDebug {
         scale: i32,
         alpha: f32,
     ) -> Result<TextureRenderElement<GlesTexture>, GlesError> {
+        let (max, min, avg, avg_fps, potential_fps) = (
+            self.fps.max_frametime().as_secs_f64(),
+            self.fps.min_frametime().as_secs_f64(),
+            self.fps.avg_frametime().as_secs_f64(),
+            self.fps.avg_fps(),
+            self.fps.potential_fps(),
+        );
         self.render(
             |ctx| {
                 egui::Area::new("main")
@@ -168,6 +181,12 @@ impl MagmaDebug {
                             ui.label(format!("git: {hash}"));
                         }
                         ui.set_max_width(300.0);
+                        ui.separator();
+                        ui.label(egui::RichText::new(format!("FPS: {:>7.3}", avg_fps)).heading());
+                        ui.label("Frame Times:");
+                        ui.label(egui::RichText::new(format!("avg: {:>7.6}", avg)).code());
+                        ui.label(egui::RichText::new(format!("min: {:>7.6}", min)).code());
+                        ui.label(egui::RichText::new(format!("max: {:>7.6}", max)).code());
                         ui.separator();
                         if let Some(gpu) = gpu {
                             ui.label(egui::RichText::new(format!("gpu: {}", gpu)).strong());
@@ -306,5 +325,151 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
         }
     } else {
         format!("None")
+    }
+}
+
+#[derive(Default)]
+pub struct Fps {
+    current_frame: Option<PendingFrame>,
+    frames: VecDeque<Frame>,
+}
+
+struct PendingFrame {
+    start: Instant,
+    duration_elements: Option<Duration>,
+    duration_render: Option<Duration>,
+    duration_screencopy: Option<Duration>,
+    duration_displayed: Option<Duration>,
+}
+
+pub struct Frame {
+    pub start: Instant,
+    pub duration_elements: Duration,
+    pub duration_render: Duration,
+    pub duration_screencopy: Option<Duration>,
+    pub duration_displayed: Duration,
+}
+
+impl Frame {
+    fn render_time(&self) -> Duration {
+        self.duration_elements + self.duration_render
+    }
+
+    fn frame_time(&self) -> Duration {
+        self.duration_elements
+            + self.duration_render
+            + self.duration_screencopy.clone().unwrap_or(Duration::ZERO)
+    }
+
+    fn time_to_display(&self) -> Duration {
+        self.duration_elements
+            + self.duration_render
+            + self.duration_screencopy.clone().unwrap_or(Duration::ZERO)
+            + self.duration_displayed
+    }
+}
+
+impl From<PendingFrame> for Frame {
+    fn from(pending: PendingFrame) -> Self {
+        Frame {
+            start: pending.start,
+            duration_elements: pending.duration_elements.unwrap_or(Duration::ZERO),
+            duration_render: pending.duration_render.unwrap_or(Duration::ZERO),
+            duration_screencopy: pending.duration_screencopy,
+            duration_displayed: pending.duration_displayed.unwrap_or(Duration::ZERO),
+        }
+    }
+}
+
+impl Fps {
+    pub fn start(&mut self) {
+        self.current_frame = Some(PendingFrame {
+            start: Instant::now(),
+            duration_elements: None,
+            duration_render: None,
+            duration_screencopy: None,
+            duration_displayed: None,
+        });
+    }
+
+    pub fn elements(&mut self) {
+        if let Some(frame) = self.current_frame.as_mut() {
+            frame.duration_elements = Some(Instant::now().duration_since(frame.start));
+        }
+    }
+
+    pub fn render(&mut self) {
+        if let Some(frame) = self.current_frame.as_mut() {
+            frame.duration_render = Some(
+                Instant::now().duration_since(frame.start)
+                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO),
+            );
+        }
+    }
+
+    pub fn screencopy(&mut self) {
+        if let Some(frame) = self.current_frame.as_mut() {
+            frame.duration_screencopy = Some(
+                Instant::now().duration_since(frame.start)
+                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO)
+                    - frame.duration_render.clone().unwrap_or(Duration::ZERO),
+            );
+        }
+    }
+
+    pub fn displayed(&mut self) {
+        if let Some(mut frame) = self.current_frame.take() {
+            frame.duration_displayed = Some(
+                Instant::now().duration_since(frame.start)
+                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO)
+                    - frame.duration_render.clone().unwrap_or(Duration::ZERO)
+                    - frame.duration_screencopy.clone().unwrap_or(Duration::ZERO),
+            );
+
+            self.frames.push_back(frame.into());
+            while self.frames.len() > 360 {
+                self.frames.pop_front();
+            }
+        }
+    }
+
+    pub fn avg_fps(&self) -> f64 {
+        if self.frames.is_empty() {
+            return 0.0;
+        }
+        let secs = match (self.frames.front(), self.frames.back()) {
+            (Some(Frame { start, .. }), Some(end_frame)) => {
+                end_frame.start.duration_since(*start) + end_frame.frame_time()
+            }
+            _ => Duration::ZERO,
+        }
+        .as_secs_f64();
+        1.0 / (secs / self.frames.len() as f64)
+    }
+
+    pub fn potential_fps(&self) -> f64 {
+        1.0 / self.avg_frametime().as_secs_f64()
+    }
+
+    pub fn max_frametime(&self) -> Duration {
+        self.frames
+            .iter()
+            .map(|f| f.frame_time())
+            .max()
+            .unwrap_or(Duration::ZERO)
+    }
+
+    pub fn min_frametime(&self) -> Duration {
+        self.frames
+            .iter()
+            .map(|f| f.frame_time())
+            .min()
+            .unwrap_or(Duration::ZERO)
+    }
+    pub fn avg_frametime(&self) -> Duration {
+        if self.frames.is_empty() {
+            return Duration::ZERO;
+        }
+        self.frames.iter().map(|f| f.frame_time()).sum::<Duration>() / (self.frames.len() as u32)
     }
 }

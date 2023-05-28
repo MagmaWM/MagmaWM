@@ -424,6 +424,8 @@ impl MagmaState<UdevData> {
                 let device = self.backend_data.devices.get_mut(&node).unwrap();
                 let surface = device.surfaces.get_mut(&crtc).unwrap();
                 surface.compositor.frame_submitted().ok();
+                #[cfg(feature = "debug")]
+                self.debug.fps.displayed();
                 self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
@@ -611,6 +613,8 @@ impl MagmaState<UdevData> {
         crtc: crtc::Handle,
         screencopy: Option<Screencopy>,
     ) -> Result<bool, SwapBuffersError> {
+        #[cfg(feature = "debug")]
+        self.debug.fps.start();
         let device = self.backend_data.devices.get_mut(&node).unwrap();
         let surface = device.surfaces.get_mut(&crtc).unwrap();
         let mut renderer = self
@@ -712,6 +716,8 @@ impl MagmaState<UdevData> {
                     .map(CustomRenderElements::Surface)
                 }),
         );
+        #[cfg(feature = "debug")]
+        self.debug.fps.elements();
 
         let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
             .compositor
@@ -725,7 +731,9 @@ impl MagmaState<UdevData> {
                 ) => err.into(),
                 _ => unreachable!(),
             });
-
+        #[cfg(feature = "debug")]
+        self.debug.fps.render();
+        
         // Copy framebuffer for screencopy.
         if let Some(mut screencopy) = screencopy {
             if let Ok(frame_result) = &frame_result {
@@ -803,6 +811,8 @@ impl MagmaState<UdevData> {
             } else {
                 screencopy.failed()
             }
+            #[cfg(feature = "debug")]
+            self.debug.fps.screencopy();
         }
 
         let mut result = match frame_result {
