@@ -182,7 +182,7 @@ impl MagmaDebug {
                         }
                         ui.set_max_width(300.0);
                         ui.separator();
-                        ui.label(egui::RichText::new(format!("FPS: {:>7.3}", avg_fps)).heading());
+                        ui.label(egui::RichText::new(format!("FPS: {:>7.3}/{:>7.3}", avg_fps, potential_fps)).heading());
                         ui.label("Frame Times:");
                         ui.label(egui::RichText::new(format!("avg: {:>7.6}", avg)).code());
                         ui.label(egui::RichText::new(format!("min: {:>7.6}", min)).code());
