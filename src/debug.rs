@@ -5,7 +5,10 @@ use std::{
     time::{Duration, Instant},
 };
 
-use egui::{Context, FullOutput};
+use egui::{
+    plot::{Bar, BarChart, Legend, Plot, Corner},
+    Color32, Context, FullOutput,
+};
 use egui_glow::Painter;
 use smithay::{
     backend::{
@@ -29,6 +32,11 @@ use crate::{
     state::{Backend, MagmaState},
     utils::focus::FocusTarget,
 };
+
+pub const ELEMENTS_COLOR: Color32 = Color32::from_rgb(173, 216, 230);
+pub const RENDER_COLOR: Color32 = Color32::from_rgb(255, 127, 80);
+pub const SCREENCOPY_COLOR: Color32 = Color32::from_rgb(255, 255, 153);
+pub const DISPLAY_COLOR: Color32 = Color32::from_rgb(152, 251, 152);
 const VENDORS: [(&str, &str); 3] = [("0x10de", "nvidia"), ("0x1002", "amd"), ("0x8086", "intel")];
 
 struct GlState {
@@ -167,6 +175,39 @@ impl MagmaDebug {
             self.fps.avg_fps(),
             self.fps.potential_fps(),
         );
+        let (bars_elements, bars_render, bars_screencopy, bars_displayed): (
+            Vec<Bar>,
+            Vec<Bar>,
+            Vec<Bar>,
+            Vec<Bar>,
+        ) = self
+            .fps
+            .frames
+            .iter()
+            .enumerate()
+            .map(|(i, frame)| {
+                (
+                    Bar::new(i as f64, frame.duration_elements.as_secs_f64()).fill(ELEMENTS_COLOR),
+                    Bar::new(i as f64, frame.duration_render.as_secs_f64()).fill(RENDER_COLOR),
+                    Bar::new(
+                        i as f64,
+                        frame
+                            .duration_screencopy
+                            .as_ref()
+                            .map(|val| val.as_secs_f64())
+                            .unwrap_or(0.0),
+                    )
+                    .fill(SCREENCOPY_COLOR),
+                    Bar::new(i as f64, frame.duration_displayed.as_secs_f64()).fill(DISPLAY_COLOR),
+                )
+            })
+            .fold((vec![], vec![], vec![], vec![]), |mut out, cur| {
+                out.0.push(cur.0);
+                out.1.push(cur.1);
+                out.2.push(cur.2);
+                out.3.push(cur.3);
+                out
+            });
         self.render(
             |ctx| {
                 egui::Area::new("main")
@@ -182,11 +223,47 @@ impl MagmaDebug {
                         }
                         ui.set_max_width(300.0);
                         ui.separator();
-                        ui.label(egui::RichText::new(format!("FPS: {:>7.3}/{:>7.3}", avg_fps, potential_fps)).heading());
+                        ui.label(
+                            egui::RichText::new(format!(
+                                "FPS: {:>7.3}/{:>7.3}",
+                                avg_fps, potential_fps
+                            ))
+                            .heading(),
+                        );
                         ui.label("Frame Times:");
                         ui.label(egui::RichText::new(format!("avg: {:>7.6}", avg)).code());
                         ui.label(egui::RichText::new(format!("min: {:>7.6}", min)).code());
                         ui.label(egui::RichText::new(format!("max: {:>7.6}", max)).code());
+                        let elements_chart = BarChart::new(bars_elements)
+                            .vertical()
+                            .name("elements")
+                            .color(ELEMENTS_COLOR);
+                        let render_chart = BarChart::new(bars_render)
+                            .stack_on(&[&elements_chart])
+                            .vertical()
+                            .name("render")
+                            .color(RENDER_COLOR);
+                        let screencopy_chart = BarChart::new(bars_screencopy)
+                            .stack_on(&[&elements_chart, &render_chart])
+                            .vertical()
+                            .name("screencopy")
+                            .color(SCREENCOPY_COLOR);
+                        let display_chart = BarChart::new(bars_displayed)
+                            .stack_on(&[&elements_chart, &render_chart, &screencopy_chart])
+                            .vertical()
+                            .name("display")
+                            .color(DISPLAY_COLOR);
+
+                        Plot::new("FPS")
+                            .legend(Legend::default().position(Corner::LeftBottom).background_alpha(0.0))
+                            .height(100.0)
+                            .show_x(false)
+                            .show(ui, |plot_ui| {
+                                plot_ui.bar_chart(elements_chart);
+                                plot_ui.bar_chart(render_chart);
+                                plot_ui.bar_chart(screencopy_chart);
+                                plot_ui.bar_chart(display_chart);
+                            });
                         ui.separator();
                         if let Some(gpu) = gpu {
                             ui.label(egui::RichText::new(format!("gpu: {}", gpu)).strong());
@@ -351,10 +428,6 @@ pub struct Frame {
 }
 
 impl Frame {
-    fn render_time(&self) -> Duration {
-        self.duration_elements + self.duration_render
-    }
-
     fn frame_time(&self) -> Duration {
         self.duration_elements
             + self.duration_render
@@ -439,7 +512,7 @@ impl Fps {
         }
         let secs = match (self.frames.front(), self.frames.back()) {
             (Some(Frame { start, .. }), Some(end_frame)) => {
-                end_frame.start.duration_since(*start) + end_frame.frame_time()
+                end_frame.start.duration_since(*start) + end_frame.time_to_display()
             }
             _ => Duration::ZERO,
         }

@@ -733,7 +733,7 @@ impl MagmaState<UdevData> {
             });
         #[cfg(feature = "debug")]
         self.debug.fps.render();
-        
+
         // Copy framebuffer for screencopy.
         if let Some(mut screencopy) = screencopy {
             if let Ok(frame_result) = &frame_result {

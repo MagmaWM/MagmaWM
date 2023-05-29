@@ -152,7 +152,8 @@ pub fn winit_dispatch(
     }
 
     *full_redraw = full_redraw.saturating_sub(1);
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.start();
     let size = winitdata.backend.window_size().physical_size;
     let damage = Rectangle::from_loc_and_size((0, 0), size);
 
@@ -225,6 +226,8 @@ pub fn winit_dispatch(
                 )
             }),
     );
+    #[cfg(feature = "debug")]
+    state.debug.fps.elements();
     winitdata.backend.bind().unwrap();
     winitdata
         .damage_tracker
@@ -235,9 +238,11 @@ pub fn winit_dispatch(
             [0.1, 0.1, 0.1, 1.0],
         )
         .unwrap();
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.render();
     winitdata.backend.submit(Some(&[damage])).unwrap();
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.displayed();
     workspace.windows().for_each(|window| {
         window.send_frame(
             output,
