@@ -13,7 +13,7 @@ use smithay::{
             Display, DisplayHandle,
         },
     },
-    utils::{Logical, Point},
+    utils::{Logical, Point, Rectangle},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
         data_device::DataDeviceState,
@@ -136,7 +136,14 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
             #[cfg(feature = "debug")]
-            debug: MagmaDebug::default(),
+            debug: MagmaDebug {
+                egui: smithay_egui::EguiState::new(Rectangle::from_loc_and_size(
+                    (0, 0),
+                    (800, 600),
+                )),
+                active: false,
+                fps: Default::default(),
+            },
         }
     }
     fn init_wayland_listener(

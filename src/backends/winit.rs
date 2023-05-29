@@ -174,7 +174,7 @@ pub fn winit_dispatch(
                         (0, 0),
                         output.current_mode().unwrap().size.to_logical(1),
                     ),
-                    1,
+                    1.0,
                     0.8,
                 )
                 .unwrap()

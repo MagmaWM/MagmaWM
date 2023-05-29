@@ -368,9 +368,9 @@ dependencies = [
 
 [[package]]
 name = "ecolor"
-version = "0.22.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2e479a7fa3f23d4e794f8b2f8b3568dd4e47886ad1b12c9c095e141cb591eb63"
+checksum = "1f99fe3cac305af9d6d92971af60d0f7ea4d783201ef1673571567b6699964d9"
 dependencies = [
  "bytemuck",
 ]
@@ -383,9 +383,9 @@ checksum = "2ab5fa33485cd85ac354df485819a63360fefa312fe04cffe65e6f175be1522c"
 
 [[package]]
 name = "egui"
-version = "0.22.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a3aef8ec3ae1b772f340170c65bf27d5b8c28f543a0116c844d2ac08d01123e7"
+checksum = "6412a21e0bde7c0918f7fb44bbbb86b5e1f88e63c026a4e747cc7af02f76dfbe"
 dependencies = [
  "ahash",
  "epaint",
@@ -394,33 +394,33 @@ dependencies = [
 
 [[package]]
 name = "egui_glow"
-version = "0.22.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1f8c2752cdf1b0ef5fcda59a898cacabad974d4f5880e92a420b2c917022da64"
+checksum = "8257332fb168a965b3dca81d6a344e053153773c889cabdba0b3b76f1629ae81"
 dependencies = [
  "bytemuck",
  "egui",
  "glow",
- "log",
  "memoffset 0.6.5",
+ "tracing",
  "wasm-bindgen",
  "web-sys",
 ]
 
 [[package]]
 name = "emath"
-version = "0.22.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3857d743a6e0741cdd60b622a74c7a36ea75f5f8f11b793b41d905d2c9721a4b"
+checksum = "b8ecd80612937e0267909d5351770fe150004e24dab93954f69ca62eecd3f77e"
 dependencies = [
  "bytemuck",
 ]
 
 [[package]]
 name = "epaint"
-version = "0.22.0"
+version = "0.21.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "09333964d4d57f40a85338ba3ca5ed4716070ab184dcfed966b35491c5c64f3b"
+checksum = "12e78b5c58a1f7f621f9d546add2adce20636422c9b251e29f749e8a2f713c95"
 dependencies = [
  "ab_glyph",
  "ahash",
@@ -781,13 +781,13 @@ dependencies = [
  "chrono",
  "colors-transform",
  "egui",
- "egui_glow",
  "indexmap",
  "once_cell",
  "ron",
  "serde",
  "smithay",
  "smithay-drm-extras",
+ "smithay-egui",
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
@@ -832,6 +832,15 @@ name = "memoffset"
 version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "5de893c32cde5f383baa4c04c5d6dbdd735cfd4a794b0debdb2bb1b421da5ff4"
+dependencies = [
+ "autocfg",
+]
+
+[[package]]
+name = "memoffset"
+version = "0.8.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d61c719bcfbcf5d62b3a09efa6088de8c54bc0bfcd3ea7ae39fcc186108b8de1"
 dependencies = [
  "autocfg",
 ]
@@ -1338,7 +1347,7 @@ checksum = "a507befe795404456341dfab10cef66ead4c041f62b8b11bbb92bffe5d0953e0"
 [[package]]
 name = "smithay"
 version = "0.3.0"
-source = "git+https://github.com/Smithay/smithay.git#1966c6c8e42273b5d6f356e94dc683a230b3fc21"
+source = "git+https://github.com/smithay//smithay#138921bff45720b185d1a2a26c82383728bd1e41"
 dependencies = [
  "appendlist",
  "bitflags 2.3.1",
@@ -1402,6 +1411,20 @@ source = "git+https://github.com/Smithay/smithay.git#1966c6c8e42273b5d6f356e94dc
 dependencies = [
  "drm",
  "edid-rs",
+]
+
+[[package]]
+name = "smithay-egui"
+version = "0.1.0"
+source = "git+https://github.com/Smithay/smithay-egui.git#197606f40067595438a90129016b1c29941c31ff"
+dependencies = [
+ "cgmath",
+ "egui",
+ "egui_glow",
+ "log",
+ "memoffset 0.8.0",
+ "smithay",
+ "xkbcommon",
 ]
 
 [[package]]
