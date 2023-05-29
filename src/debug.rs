@@ -1,29 +1,25 @@
 use std::{
-    cell::RefCell,
     collections::VecDeque,
-    rc::Rc,
     time::{Duration, Instant},
 };
 
 use egui::{
-    plot::{Bar, BarChart, Legend, Plot, Corner},
-    Color32, Context, FullOutput,
+    plot::{Bar, BarChart, Corner, Legend, Plot},
+    Color32,
 };
 use smithay::{
     backend::{
-        allocator::Fourcc,
         drm::DrmNode,
         renderer::{
-            element::texture::{TextureRenderBuffer, TextureRenderElement},
+            element::texture::TextureRenderElement,
             gles::{GlesError, GlesTexture},
             glow::GlowRenderer,
-            Bind, Frame as RenderFrame, Offscreen, Renderer, Unbind,
         },
     },
     input::{keyboard::xkb, Seat},
     output::Output,
     reexports::wayland_server::Resource,
-    utils::{Logical, Rectangle, Transform},
+    utils::{Logical, Rectangle},
     wayland::{compositor::with_states, shell::xdg::XdgToplevelSurfaceData},
 };
 
@@ -37,7 +33,6 @@ pub const RENDER_COLOR: Color32 = Color32::from_rgb(255, 127, 80);
 pub const SCREENCOPY_COLOR: Color32 = Color32::from_rgb(255, 255, 153);
 pub const DISPLAY_COLOR: Color32 = Color32::from_rgb(152, 251, 152);
 const VENDORS: [(&str, &str); 3] = [("0x10de", "nvidia"), ("0x1002", "amd"), ("0x8086", "intel")];
-
 
 pub struct MagmaDebug {
     pub egui: smithay_egui::EguiState,
@@ -143,7 +138,11 @@ impl MagmaDebug {
                             .color(DISPLAY_COLOR);
 
                         Plot::new("FPS")
-                            .legend(Legend::default().position(Corner::LeftBottom).background_alpha(0.0))
+                            .legend(
+                                Legend::default()
+                                    .position(Corner::LeftBottom)
+                                    .background_alpha(0.0),
+                            )
                             .height(100.0)
                             .show_x(false)
                             .show(ui, |plot_ui| {
@@ -164,8 +163,8 @@ impl MagmaDebug {
                                     VENDORS
                                         .iter()
                                         .find(|v| v.0 == vendor.trim())
-                                        .and_then(|v| Some(v.1))
-                                        .unwrap_or(&"Unknown")
+                                        .map(|v| v.1)
+                                        .unwrap_or("Unknown")
                                 )));
                             }
                             ui.label(format!(
@@ -289,7 +288,7 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
             FocusTarget::Popup(p) => format!("Popup {}", p.wl_surface().id().protocol_id()),
         }
     } else {
-        format!("None")
+        "None".to_string()
     }
 }
 
@@ -319,13 +318,13 @@ impl Frame {
     fn frame_time(&self) -> Duration {
         self.duration_elements
             + self.duration_render
-            + self.duration_screencopy.clone().unwrap_or(Duration::ZERO)
+            + self.duration_screencopy.unwrap_or(Duration::ZERO)
     }
 
     fn time_to_display(&self) -> Duration {
         self.duration_elements
             + self.duration_render
-            + self.duration_screencopy.clone().unwrap_or(Duration::ZERO)
+            + self.duration_screencopy.unwrap_or(Duration::ZERO)
             + self.duration_displayed
     }
 }
@@ -363,7 +362,7 @@ impl Fps {
         if let Some(frame) = self.current_frame.as_mut() {
             frame.duration_render = Some(
                 Instant::now().duration_since(frame.start)
-                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO),
+                    - frame.duration_elements.unwrap_or(Duration::ZERO),
             );
         }
     }
@@ -372,8 +371,8 @@ impl Fps {
         if let Some(frame) = self.current_frame.as_mut() {
             frame.duration_screencopy = Some(
                 Instant::now().duration_since(frame.start)
-                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO)
-                    - frame.duration_render.clone().unwrap_or(Duration::ZERO),
+                    - frame.duration_elements.unwrap_or(Duration::ZERO)
+                    - frame.duration_render.unwrap_or(Duration::ZERO),
             );
         }
     }
@@ -382,9 +381,9 @@ impl Fps {
         if let Some(mut frame) = self.current_frame.take() {
             frame.duration_displayed = Some(
                 Instant::now().duration_since(frame.start)
-                    - frame.duration_elements.clone().unwrap_or(Duration::ZERO)
-                    - frame.duration_render.clone().unwrap_or(Duration::ZERO)
-                    - frame.duration_screencopy.clone().unwrap_or(Duration::ZERO),
+                    - frame.duration_elements.unwrap_or(Duration::ZERO)
+                    - frame.duration_render.unwrap_or(Duration::ZERO)
+                    - frame.duration_screencopy.unwrap_or(Duration::ZERO),
             );
 
             self.frames.push_back(frame.into());
