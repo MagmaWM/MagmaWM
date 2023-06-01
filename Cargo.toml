@@ -17,6 +17,8 @@ once_cell = "1.17.1"
 magma-ipc = { path = "./magma-ipc" }
 wayland-scanner = "0.30.0"
 wayland-backend = "0.1.2"
+indexmap = { version = "1.9.3", features = ["serde"] }
+colors-transform = "0.2.11"
 
 [dependencies.smithay]
 git = "https://github.com/Smithay/smithay.git"
@@ -28,6 +30,7 @@ features = [
     "backend_session_libseat",
     "backend_drm",
     "renderer_multi",
+    "renderer_glow",
     "backend_gbm",
     "backend_udev",
     "backend_libinput",

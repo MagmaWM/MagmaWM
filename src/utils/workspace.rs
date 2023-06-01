@@ -6,6 +6,7 @@ use std::{
 use smithay::{
     backend::renderer::{
         element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
+        gles::element::PixelShaderElement,
         ImportAll, Renderer, Texture,
     },
     desktop::{space::SpaceElement, Window},
@@ -13,7 +14,13 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
-use super::{binarytree::BinaryTree, tiling::bsp_update_layout};
+use crate::state::CONFIG;
+
+use super::{
+    binarytree::BinaryTree,
+    render::{border::BorderShader, AsGlowRenderer},
+    tiling::bsp_update_layout,
+};
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct MagmaWindow {
@@ -81,7 +88,10 @@ impl Workspace {
         removed
     }
 
-    pub fn render_elements<R: Renderer + ImportAll, C: From<WaylandSurfaceRenderElement<R>>>(
+    pub fn render_elements<
+        R: Renderer + ImportAll + AsGlowRenderer,
+        C: From<WaylandSurfaceRenderElement<R>> + From<PixelShaderElement>,
+    >(
         &self,
         renderer: &mut R,
     ) -> Vec<C>
@@ -90,10 +100,19 @@ impl Workspace {
     {
         let mut render_elements: Vec<C> = Vec::new();
         for element in &self.windows {
-            render_elements.append(&mut element.borrow().window.render_elements(
+            let window = &element.borrow().window;
+            if CONFIG.borders.thickness > 0 {
+                render_elements.push(C::from(BorderShader::element(
+                    renderer.glow_renderer_mut(),
+                    window,
+                    element.borrow().rec.loc,
+                )));
+            }
+            render_elements.append(&mut window.render_elements(
                 renderer,
                 element.borrow().render_location().to_physical(1),
                 Scale::from(1.0),
+                1.0,
             ));
         }
         render_elements

@@ -20,14 +20,16 @@ static POSSIBLE_BACKENDS: &[&str] = &[
     "--tty-udev : Run magma as a tty udev client (requires root if without logind).",
 ];
 fn main() {
+    let log_dir = format!(
+        "{}/.local/share/MagmaWM/",
+        std::env::var("HOME").expect("this should always be set")
+    );
     let file_appender = tracing_appender::rolling::never(
-        format!(
-            "{}/.local/share/MagmaWM/",
-            std::env::var("HOME").expect("this should always be set")
-        ),
+        &log_dir,
         format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
     );
-    let log_appender = std::io::stdout.and(file_appender);
+    let latest_file_appender = tracing_appender::rolling::never(&log_dir, "latest.log");
+    let log_appender = std::io::stdout.and(file_appender).and(latest_file_appender);
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
         tracing_subscriber::fmt()
             .with_writer(log_appender)
@@ -83,14 +85,13 @@ fn main() {
         }
         Some(other) => {
             error!("Unknown backend: {}", other);
+            info!("Possible backends are:");
+            for line in POSSIBLE_BACKENDS {
+                println!("{}", line);
+            }
         }
         None => {
-            println!("USAGE: magma --backend");
-            println!();
-            println!("Possible backends are:");
-            for b in POSSIBLE_BACKENDS {
-                println!("\t{}", b);
-            }
+            backends::init_backend_auto();
         }
     }
 
