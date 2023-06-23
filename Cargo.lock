@@ -671,11 +671,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "magma-ipc"
+version = "0.1.0"
+dependencies = [
+ "wayland-backend",
+ "wayland-client 0.30.1",
+ "wayland-scanner 0.30.0",
+]
+
+[[package]]
 name = "magmawm"
 version = "0.0.1"
 dependencies = [
  "backtrace",
  "chrono",
+ "magma-ipc",
  "colors-transform",
  "indexmap",
  "once_cell",
@@ -686,6 +696,8 @@ dependencies = [
  "tracing",
  "tracing-appender",
  "tracing-subscriber",
+ "wayland-backend",
+ "wayland-scanner 0.30.0",
  "xdg",
 ]
 
@@ -1232,7 +1244,7 @@ dependencies = [
  "memmap2",
  "nix 0.24.3",
  "pkg-config",
- "wayland-client",
+ "wayland-client 0.29.5",
  "wayland-cursor",
  "wayland-protocols 0.29.5",
 ]
@@ -1578,6 +1590,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "wayland-client"
+version = "0.30.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "85bde68449abab1a808e5227b6e295f4ae3680911eb7711b4a2cb90141edb780"
+dependencies = [
+ "bitflags",
+ "nix 0.26.2",
+ "wayland-backend",
+ "wayland-scanner 0.30.0",
+]
+
+[[package]]
 name = "wayland-commons"
 version = "0.29.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1596,7 +1620,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6865c6b66f13d6257bef1cd40cbfe8ef2f150fb8ebbdb1e8e873455931377661"
 dependencies = [
  "nix 0.24.3",
- "wayland-client",
+ "wayland-client 0.29.5",
  "xcursor",
 ]
 
