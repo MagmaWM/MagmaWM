@@ -9,6 +9,8 @@
     <img src="https://img.shields.io/github/languages/top/magmawm/magmawm?style=for-the-badge"/>
     <img src="https://img.shields.io/github/commit-activity/m/magmawm/magmawm?style=for-the-badge"/>
     <img src="https://img.shields.io/github/issues/magmawm/magmawm?style=for-the-badge"/>
+    <img src="https://img.shields.io/github/license/magmawm/magmawm?style=for-the-badge"/>
+    <img src="https://img.shields.io/discord/1087402623646322748?style=for-the-badge"/>
   </p>
 
 ## About
@@ -24,11 +26,15 @@ Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 - [ ] Dynamic Tiling and Floating Windows
 - [x] Keyboard and Monitor Managament
 - [x] [Screencopy](https://wayland.app/protocols/wlr-screencopy-unstable-v1) Protocols for Screensharing/Screenshots
-- [ ] Lots of eye candy like blur, animations etc
+- [ ] Blur
+- [ ] Animations
+- [X] Borders
 - [x] Can display wayland applications
 - [ ] Xwayland Support
 - [x] Working Popups
 - [x] Can be launched from TTY
+
+<!-- hello there -->
 
 ## Build
 
@@ -39,11 +45,17 @@ You will need to install MagmaWM's dependencies with your package manager of cho
 ```bash
 # apt install libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
 ```
+
 #### Arch and derivatives (EndeavourOS, Garuda, etc.)
-Manjaro is **not** supported.
 ```bash
 # pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib mesa
 ```
+
+#### Fedora (this is untested! please open an issue if you have any problems) <!-- TODO: test this -->
+```bash
+# dnf install systemd-devel libgbm-devel libxkbcommon-devel Mesa-libEGL-devel wayland-devel libinput-devel libdbus-glib-devel seatd-devel
+```
+
 #### openSUSE Tumbleweed
 ```bash
 # zypper in systemd-devel libgbm-devel libxkbcommon-devel Mesa-libEGL1 wayland-devel libinput-devel libdbus-glib-1-3 seatd-devel
@@ -55,7 +67,7 @@ Clone the git repo and build MagmaWM by running the following command:
 $ cargo build --release
 ```
 The binary will be created in `./target/release/magmawm`.
-You can also use `cargo run --release` to run the project.
+> 💡 You can also use `cargo run --release` to run the project.
 ## Install
 **MagmaWM** is still under heavy development and installation is not recommended.
 If you really want to, run the following command to install MagmaWM: 
