@@ -51,9 +51,9 @@ You will need to install MagmaWM's dependencies with your package manager of cho
 # pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib mesa
 ```
 
-#### Fedora (this is untested! please open an issue if you have any problems) <!-- TODO: test this -->
+#### Fedora
 ```bash
-# dnf install systemd-devel libgbm-devel libxkbcommon-devel Mesa-libEGL-devel wayland-devel libinput-devel libdbus-glib-devel seatd-devel
+# dnf install systemd-devel libgbm-devel libxkbcommon-devel Mesa-libEGL-devel wayland-devel libinput-devel dbus-glib-devel libseat-devel
 ```
 
 #### openSUSE Tumbleweed
