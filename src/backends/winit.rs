@@ -137,6 +137,7 @@ pub fn winit_dispatch(
                 None,
                 None,
             );
+            layer_map_for_output(output).arrange();
         }
         WinitEvent::Input(event) => state.process_input_event(event),
         _ => (),
