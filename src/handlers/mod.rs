@@ -9,13 +9,13 @@ use smithay::{
     output::Output,
     reexports::wayland_server::{
         protocol::{wl_output::WlOutput, wl_surface::WlSurface},
-        Resource,
+        Client, Resource,
     },
     wayland::{
         buffer::BufferHandler,
         compositor::{
-            get_parent, is_sync_subsurface, with_states, CompositorHandler, CompositorState,
-            SurfaceAttributes,
+            get_parent, is_sync_subsurface, with_states, CompositorClientState, CompositorHandler,
+            CompositorState, SurfaceAttributes,
         },
         data_device::{
             set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler,
@@ -30,7 +30,7 @@ use smithay::{
 };
 
 use crate::{
-    state::{Backend, MagmaState},
+    state::{Backend, ClientState, MagmaState},
     utils::{focus::FocusTarget, tiling::bsp_update_layout, workspace::MagmaWindow},
 };
 
@@ -40,6 +40,10 @@ pub mod xdg_shell;
 impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
     fn compositor_state(&mut self) -> &mut CompositorState {
         &mut self.compositor_state
+    }
+
+    fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
+        &client.get_data::<ClientState>().unwrap().compositor_state
     }
 
     fn commit(&mut self, surface: &WlSurface) {
@@ -67,7 +71,7 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
                 self.set_input_focus(FocusTarget::Window(window));
             }
         }
-        on_commit_buffer_handler(surface);
+        on_commit_buffer_handler::<Self>(surface);
         if !is_sync_subsurface(surface) {
             let mut root = surface.clone();
             while let Some(parent) = get_parent(&root) {
@@ -158,6 +162,7 @@ delegate_seat!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 //
 
 impl<BackendData: Backend> DataDeviceHandler for MagmaState<BackendData> {
+    type SelectionUserData = ();
     fn data_device_state(&self) -> &smithay::wayland::data_device::DataDeviceState {
         &self.data_device_state
     }
@@ -169,6 +174,7 @@ impl<BackendData: Backend> ServerDndGrabHandler for MagmaState<BackendData> {}
 delegate_data_device!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 impl<BackendData: Backend> PrimarySelectionHandler for MagmaState<BackendData> {
+    type SelectionUserData = ();
     fn primary_selection_state(
         &self,
     ) -> &smithay::wayland::primary_selection::PrimarySelectionState {

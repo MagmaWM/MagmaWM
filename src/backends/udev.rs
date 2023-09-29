@@ -20,7 +20,8 @@ use smithay::{
                 texture::{TextureBuffer, TextureRenderElement},
                 AsRenderElements,
             },
-            gles::{GlesRenderer, GlesTexture},
+            gles::GlesTexture,
+            glow::GlowRenderer,
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
             Bind, BufferType, ExportMem, Offscreen,
         },
@@ -60,7 +61,7 @@ use crate::{
     delegate_screencopy_manager,
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::CustomRenderElements,
+    utils::render::{border::BorderShader, CustomRenderElements},
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
@@ -78,7 +79,7 @@ pub type GbmDrmCompositor =
 pub struct UdevData {
     pub session: LibSeatSession,
     _primary_gpu: DrmNode,
-    gpus: GpuManager<GbmGlesBackend<GlesRenderer>>,
+    gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
     devices: HashMap<DrmNode, Device>,
 }
 
@@ -575,7 +576,7 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-
+                BorderShader::init(renderer.as_mut());
                 let surface = Surface {
                     _device_id: node,
                     _render_node: device.render_node,
@@ -661,6 +662,7 @@ impl MagmaState<UdevData> {
                         &mut renderer,
                         loc.to_physical_precise_round(1),
                         Scale::from(1.0),
+                        1.0,
                     )
                     .into_iter()
                     .map(CustomRenderElements::Surface)
@@ -685,6 +687,7 @@ impl MagmaState<UdevData> {
                         &mut renderer,
                         loc.to_physical_precise_round(1),
                         Scale::from(1.0),
+                        1.0,
                     )
                     .into_iter()
                     .map(CustomRenderElements::Surface)
@@ -854,6 +857,7 @@ impl MagmaState<UdevData> {
                 |_, _| Some(output.clone()),
             );
         });
+        BorderShader::cleanup(renderer.as_mut());
         result
     }
 }

@@ -2,11 +2,7 @@ use std::time::Duration;
 
 use smithay::{
     backend::{
-        renderer::{
-            damage::OutputDamageTracker,
-            element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
-            gles::GlesRenderer,
-        },
+        renderer::{damage::OutputDamageTracker, element::AsRenderElements, glow::GlowRenderer},
         winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
@@ -24,7 +20,7 @@ use smithay::{
 use tracing::info;
 
 pub struct WinitData {
-    backend: WinitGraphicsBackend<GlesRenderer>,
+    backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
 }
 
@@ -33,7 +29,10 @@ impl Backend for WinitData {
         "winit".to_string()
     }
 }
-use crate::state::{Backend, CalloopData, MagmaState, CONFIG};
+use crate::{
+    state::{Backend, CalloopData, MagmaState, CONFIG},
+    utils::render::{border::BorderShader, CustomRenderElements},
+};
 
 pub fn init_winit() {
     let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
@@ -81,7 +80,7 @@ pub fn init_winit() {
     let mut data = CalloopData { display, state };
 
     let state = &mut data.state;
-
+    BorderShader::init(state.backend_data.backend.renderer());
     // map output to every workspace
     for workspace in state.workspaces.iter() {
         workspace.add_output(output.clone());
@@ -138,6 +137,7 @@ pub fn winit_dispatch(
                 None,
                 None,
             );
+            layer_map_for_output(output).arrange();
         }
         WinitEvent::Input(event) => state.process_input_event(event),
         _ => (),
@@ -159,8 +159,7 @@ pub fn winit_dispatch(
 
     winitdata.backend.bind().unwrap();
 
-    let mut renderelements: Vec<WaylandSurfaceRenderElement<_>> = vec![];
-
+    let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
     let layer_map = layer_map_for_output(output);
@@ -178,11 +177,12 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                AsRenderElements::<GlowRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
                     Scale::from(1.0),
+                    1.0,
                 )
             }),
     );
@@ -198,11 +198,12 @@ pub fn winit_dispatch(
                     .map(|geo| (geo.loc, surface))
             })
             .flat_map(|(loc, surface)| {
-                AsRenderElements::<GlesRenderer>::render_elements::<WaylandSurfaceRenderElement<_>>(
+                AsRenderElements::<GlowRenderer>::render_elements::<CustomRenderElements<_>>(
                     surface,
                     winitdata.backend.renderer(),
                     loc.to_physical_precise_round(1),
                     Scale::from(1.0),
+                    1.0,
                 )
             }),
     );
@@ -231,4 +232,5 @@ pub fn winit_dispatch(
     workspace.windows().for_each(|e| e.refresh());
     display.flush_clients().unwrap();
     state.popup_manager.cleanup();
+    BorderShader::cleanup(winitdata.backend.renderer());
 }
