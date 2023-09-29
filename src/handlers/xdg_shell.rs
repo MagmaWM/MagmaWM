@@ -41,12 +41,13 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
         self.workspaces.pending.push(window);
     }
     fn toplevel_destroyed(&mut self, surface: ToplevelSurface) {
-        let window = self
+        let Some(window) = self
             .workspaces
             .all_windows()
             .find(|w| w.toplevel() == &surface)
-            .unwrap()
-            .clone();
+            .map(|w| w.clone()) else {
+                return;
+            };
 
         self.workspaces
             .workspace_from_window(&window)
