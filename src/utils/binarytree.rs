@@ -136,6 +136,24 @@ impl BinaryTree {
             }
         }
     }
+    pub fn get_windows(&self) -> Vec<Rc<RefCell<MagmaWindow>>> {
+        let mut result = Vec::new();
+        self.get_windows_recursive(&mut result);
+        result.clone()
+    }
+
+    fn get_windows_recursive(&self, result: &mut Vec<Rc<RefCell<MagmaWindow>>>) {
+        match self {
+            BinaryTree::Empty => {}
+            BinaryTree::Window(window) => {
+                result.push(Rc::clone(window));
+            }
+            BinaryTree::Split { left, right, .. } => {
+                left.get_windows_recursive(result);
+                right.get_windows_recursive(result);
+            }
+        }
+    }
 }
 
 impl Default for BinaryTree {

@@ -297,7 +297,18 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 self.handle_action(Action::MoveWindow(u8));
                 self.handle_action(Action::Workspace(u8));
             }
-            Action::ToggleWindowFloating => todo!(),
+            Action::ToggleWindowFloating => {
+                let window = self
+                    .workspaces
+                    .current()
+                    .window_under(self.pointer_location)
+                    .map(|d| d.0.clone());
+                if let Some(window) = window {
+                    self.workspaces
+                        .current_mut()
+                        .toggle_window_floating(&window)
+                }
+            }
             Action::Spawn(command) => {
                 if let Err(err) = std::process::Command::new("/bin/sh")
                     .arg("-c")

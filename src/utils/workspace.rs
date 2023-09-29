@@ -179,9 +179,10 @@ impl Workspace {
     pub fn window_under<P: Into<Point<f64, Logical>>>(
         &self,
         point: P,
-    ) -> Option<(Ref<'_, Window>, Point<i32, Logical>)> {
+    ) -> Option<(Window, Point<i32, Logical>)> {
         let point = point.into();
-        self.windows
+        let floating = self
+            .floating
             .iter()
             .filter(|e| e.borrow().bbox().to_f64().contains(point))
             .find_map(|e| {
@@ -191,15 +192,63 @@ impl Workspace {
                     .window
                     .is_in_input_region(&(point - render_location.to_f64()))
                 {
-                    Some((Ref::map(e.borrow(), |hw| &hw.window), render_location))
+                    Some((e.borrow().window.clone(), render_location))
                 } else {
                     None
                 }
-            })
+            });
+
+        let tree = self
+            .layout_tree
+            .get_windows()
+            .iter()
+            .filter(|e| e.borrow().bbox().to_f64().contains(point))
+            .find_map(|e| {
+                // we need to offset the point to the location where the surface is actually drawn
+                let render_location = e.borrow().render_location();
+                if e.borrow()
+                    .window
+                    .is_in_input_region(&(point - render_location.to_f64()))
+                {
+                    Some((e.borrow().window.clone(), render_location))
+                } else {
+                    None
+                }
+            });
+
+        if let Some(floating) = floating {
+            Some(floating)
+        } else if let Some(tree) = tree {
+            Some(tree)
+        } else {
+            None
+        }
     }
 
     pub fn contains_window(&self, window: &Window) -> bool {
         self.windows.iter().any(|w| &w.borrow().window == window)
+    }
+
+    pub fn toggle_window_floating(&mut self, window: &Window) {
+        if let Some(mwindow) = self
+            .layout_tree
+            .get_windows()
+            .into_iter()
+            .find(|w| &w.borrow().window == window)
+        {
+            self.layout_tree.remove(window);
+            self.floating.push(mwindow);
+        } else if let Some(mwindow) = self
+            .floating
+            .clone()
+            .into_iter()
+            .find(|w| &w.borrow().window == window)
+        {
+            self.floating.retain(|w| w != &mwindow);
+            self.layout_tree
+                .insert(mwindow, self.layout_tree.next_split(), 0.5)
+        }
+        bsp_update_layout(self)
     }
 }
 
