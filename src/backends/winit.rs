@@ -3,7 +3,7 @@ use std::time::Duration;
 use smithay::{
     backend::{
         renderer::{damage::OutputDamageTracker, element::AsRenderElements, glow::GlowRenderer},
-        winit::{self, WinitError, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
+        winit::{self, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode, Output, PhysicalProperties, Subpixel},
@@ -12,7 +12,8 @@ use smithay::{
             timer::{TimeoutAction, Timer},
             EventLoop,
         },
-        wayland_server::Display,
+        wayland_server::{Display, DisplayHandle},
+        winit::platform::pump_events::PumpStatus,
     },
     utils::{Rectangle, Scale, Transform},
     wayland::shell::wlr_layer::Layer,
@@ -37,12 +38,12 @@ use crate::{
 pub fn init_winit() {
     let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
 
-    let mut display: Display<MagmaState<WinitData>> = Display::new().unwrap();
+    let display: Display<MagmaState<WinitData>> = Display::new().unwrap();
 
     let (backend, mut winit) = winit::init().unwrap();
 
     let mode = Mode {
-        size: backend.window_size().physical_size,
+        size: backend.window_size(),
         refresh: 60_000,
     };
 
@@ -70,14 +71,18 @@ pub fn init_winit() {
         backend,
         damage_tracker: damage_tracked_renderer,
     };
+    let display_handle: DisplayHandle = display.handle().clone();
     let state = MagmaState::new(
         event_loop.handle(),
         event_loop.get_signal(),
-        &mut display,
+        display,
         winitdata,
     );
 
-    let mut data = CalloopData { display, state };
+    let mut data = CalloopData {
+        display_handle,
+        state,
+    };
 
     let state = &mut data.state;
     BorderShader::init(state.backend_data.backend.renderer());
@@ -123,7 +128,6 @@ pub fn winit_dispatch(
     output: &Output,
     full_redraw: &mut u8,
 ) {
-    let display = &mut data.display;
     let state = &mut data.state;
 
     let res = winit.dispatch_new_events(|event| match event {
@@ -145,16 +149,14 @@ pub fn winit_dispatch(
 
     let winitdata = &mut state.backend_data;
 
-    if let Err(WinitError::WindowClosed) = res {
+    if let PumpStatus::Exit(_) = res {
         // Stop the loop
         state.loop_signal.stop();
-    } else {
-        res.unwrap();
     }
 
     *full_redraw = full_redraw.saturating_sub(1);
 
-    let size = winitdata.backend.window_size().physical_size;
+    let size = winitdata.backend.window_size();
     let damage = Rectangle::from_loc_and_size((0, 0), size);
 
     winitdata.backend.bind().unwrap();
@@ -230,7 +232,7 @@ pub fn winit_dispatch(
     });
 
     workspace.windows().for_each(|e| e.refresh());
-    display.flush_clients().unwrap();
+    data.display_handle.flush_clients().unwrap();
     state.popup_manager.cleanup();
     BorderShader::cleanup(winitdata.backend.renderer());
 }

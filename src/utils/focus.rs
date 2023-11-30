@@ -113,6 +113,82 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
             FocusTarget::Popup(p) => PointerTarget::leave(p.wl_surface(), seat, data, serial, time),
         }
     }
+
+    fn frame(&self, _seat: &Seat<MagmaState<BackendData>>, _data: &mut MagmaState<BackendData>) {
+        todo!()
+    }
+
+    fn gesture_swipe_begin(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GestureSwipeBeginEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_swipe_update(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GestureSwipeUpdateEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_swipe_end(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GestureSwipeEndEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_pinch_begin(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GesturePinchBeginEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_pinch_update(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GesturePinchUpdateEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_pinch_end(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GesturePinchEndEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_hold_begin(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GestureHoldBeginEvent,
+    ) {
+        todo!()
+    }
+
+    fn gesture_hold_end(
+        &self,
+        _seat: &Seat<MagmaState<BackendData>>,
+        _data: &mut MagmaState<BackendData>,
+        _event: &smithay::input::pointer::GestureHoldEndEvent,
+    ) {
+        todo!()
+    }
 }
 
 impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarget {
