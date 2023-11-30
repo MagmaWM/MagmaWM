@@ -75,6 +75,15 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     fn grab(&mut self, _surface: PopupSurface, _seat: WlSeat, _serial: Serial) {
         // TODO popup grabs
     }
+
+    fn reposition_request(
+        &mut self,
+        _surface: PopupSurface,
+        _positioner: PositionerState,
+        _token: u32,
+    ) {
+        todo!()
+    }
 }
 
 delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
@@ -136,7 +145,13 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
     };
 
     if let Some(popup) = popup_manager.find_popup(surface) {
-        let PopupKind::Xdg(ref popup) = popup;
+        let popup = match popup {
+            PopupKind::Xdg(ref popup) => popup,
+            // Doesn't require configure
+            PopupKind::InputMethod(ref _input_popup) => {
+                return;
+            }
+        };
         let initial_configure_sent = with_states(surface, |states| {
             states
                 .data_map
