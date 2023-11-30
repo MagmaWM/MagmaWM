@@ -1,4 +1,4 @@
-use std::{ffi::OsString, os::fd::AsRawFd, sync::Arc, time::Instant};
+use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use once_cell::sync::Lazy;
 use smithay::{
@@ -16,9 +16,8 @@ use smithay::{
     utils::{Logical, Point},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
-        data_device::DataDeviceState,
         output::OutputManagerState,
-        primary_selection::PrimarySelectionState,
+        selection::{data_device::DataDeviceState, primary_selection::PrimarySelectionState},
         shell::{
             wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
             xdg::{decoration::XdgDecorationState, XdgShellState},
@@ -34,7 +33,7 @@ use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
-    pub display: Display<MagmaState<BackendData>>,
+    pub display_handle: DisplayHandle,
 }
 
 pub trait Backend {
@@ -70,11 +69,11 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub pointer_location: Point<f64, Logical>,
 }
 
-impl<BackendData: Backend> MagmaState<BackendData> {
+impl<BackendData: Backend + 'static> MagmaState<BackendData> {
     pub fn new(
-        mut loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
+        loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
         loop_signal: LoopSignal,
-        display: &mut Display<MagmaState<BackendData>>,
+        display: Display<MagmaState<BackendData>>,
         backend_data: BackendData,
     ) -> Self {
         let start_time = Instant::now();
@@ -106,7 +105,40 @@ impl<BackendData: Backend> MagmaState<BackendData> {
 
         let workspaces = Workspaces::new(CONFIG.workspaces);
 
-        let socket_name = Self::init_wayland_listener(&mut loop_handle, display);
+        // Creates a new listening socket, automatically choosing the next available `wayland` socket name.
+        let listening_socket = ListeningSocketSource::new_auto().unwrap();
+
+        // Get the name of the listening socket.
+        // Clients will connect to this socket.
+        let socket_name = listening_socket.socket_name().to_os_string();
+
+        loop_handle
+            .insert_source(listening_socket, move |client_stream, _, state| {
+                // Inside the callback, you should insert the client into the display.
+                //
+                // You may also associate some data with the client when inserting the client.
+                state
+                    .display_handle
+                    .insert_client(client_stream, Arc::new(ClientState::default()))
+                    .unwrap();
+            })
+            .expect("Failed to init the wayland event source.");
+
+        // You also need to add the display itself to the event loop, so that client events will be processed by wayland-server.
+        loop_handle
+            .insert_source(
+                Generic::new(display, Interest::READ, Mode::Level),
+                |_, display, state| {
+                    unsafe {
+                        display
+                            .get_mut()
+                            .dispatch_clients(&mut state.state)
+                            .unwrap()
+                    };
+                    Ok(PostAction::Continue)
+                },
+            )
+            .expect("Failed to init wayland server source");
 
         Self {
             loop_handle,
@@ -130,47 +162,6 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
         }
-    }
-    fn init_wayland_listener(
-        handle: &mut LoopHandle<'static, CalloopData<BackendData>>,
-        display: &mut Display<MagmaState<BackendData>>,
-    ) -> OsString {
-        // Creates a new listening socket, automatically choosing the next available `wayland` socket name.
-        let listening_socket = ListeningSocketSource::new_auto().unwrap();
-
-        // Get the name of the listening socket.
-        // Clients will connect to this socket.
-        let socket_name = listening_socket.socket_name().to_os_string();
-
-        handle
-            .insert_source(listening_socket, move |client_stream, _, state| {
-                // Inside the callback, you should insert the client into the display.
-                //
-                // You may also associate some data with the client when inserting the client.
-                state
-                    .display
-                    .handle()
-                    .insert_client(client_stream, Arc::new(ClientState::default()))
-                    .unwrap();
-            })
-            .expect("Failed to init the wayland event source.");
-
-        // You also need to add the display itself to the event loop, so that client events will be processed by wayland-server.
-        handle
-            .insert_source(
-                Generic::new(
-                    display.backend().poll_fd().as_raw_fd(),
-                    Interest::READ,
-                    Mode::Level,
-                ),
-                |_, _, state| {
-                    state.display.dispatch_clients(&mut state.state).unwrap();
-                    Ok(PostAction::Continue)
-                },
-            )
-            .unwrap();
-
-        socket_name
     }
 
     pub fn window_under(&mut self) -> Option<(Window, Point<i32, Logical>)> {

@@ -15,11 +15,18 @@ use smithay::{
             get_parent, is_sync_subsurface, CompositorClientState, CompositorHandler,
             CompositorState,
         },
-        data_device::{
-            set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, ServerDndGrabHandler,
-        },
-        primary_selection::{set_primary_focus, PrimarySelectionHandler},
         seat::WaylandFocus,
+        selection::{
+            data_device::DataDeviceState, primary_selection::PrimarySelectionState,
+            SelectionHandler,
+        },
+        selection::{
+            data_device::{
+                set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler,
+                ServerDndGrabHandler,
+            },
+            primary_selection::{set_primary_focus, PrimarySelectionHandler},
+        },
         shell::wlr_layer::{
             Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
         },
@@ -135,9 +142,12 @@ delegate_seat!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 // Wl Data Device
 //
 
-impl<BackendData: Backend> DataDeviceHandler for MagmaState<BackendData> {
+impl<BackendData: Backend> SelectionHandler for MagmaState<BackendData> {
     type SelectionUserData = ();
-    fn data_device_state(&self) -> &smithay::wayland::data_device::DataDeviceState {
+}
+
+impl<BackendData: Backend> DataDeviceHandler for MagmaState<BackendData> {
+    fn data_device_state(&self) -> &DataDeviceState {
         &self.data_device_state
     }
 }
@@ -148,10 +158,7 @@ impl<BackendData: Backend> ServerDndGrabHandler for MagmaState<BackendData> {}
 delegate_data_device!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 impl<BackendData: Backend> PrimarySelectionHandler for MagmaState<BackendData> {
-    type SelectionUserData = ();
-    fn primary_selection_state(
-        &self,
-    ) -> &smithay::wayland::primary_selection::PrimarySelectionState {
+    fn primary_selection_state(&self) -> &PrimarySelectionState {
         &self.primary_selection_state
     }
 }
