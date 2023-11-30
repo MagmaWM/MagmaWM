@@ -1,7 +1,7 @@
 use colors_transform::{Color, Rgb};
 use serde::{ser::SerializeSeq, Deserialize, Serialize, Serializer};
 use smithay::input::keyboard::{
-    keysyms as KeySyms, xkb, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
+    xkb, xkb::keysyms as KeySyms, Keysym, ModifiersState, XkbConfig as WlXkbConfig,
 };
 use tracing::warn;
 
@@ -73,27 +73,29 @@ where
 
     let name = String::deserialize(deserializer)?;
     //let name = format!("KEY_{}", code);
-    match xkb::keysym_from_name(&name, xkb::KEYSYM_NO_FLAGS) {
-        KeySyms::KEY_NoSymbol => match xkb::keysym_from_name(&name, xkb::KEYSYM_CASE_INSENSITIVE) {
-            KeySyms::KEY_NoSymbol => Err(<D::Error as Error>::invalid_value(
-                Unexpected::Str(&name),
-                &"One of the keysym names of xkbcommon.h without the 'KEY_' prefix",
-            )),
-            x => {
-                warn!(
-                    "Key-Binding '{}' only matched case insensitive for {:?}",
-                    name,
-                    xkb::keysym_get_name(x)
-                );
-                Ok(x)
+    match xkb::keysym_from_name(&name, xkb::KEYSYM_NO_FLAGS).raw() {
+        KeySyms::KEY_NoSymbol => {
+            match xkb::keysym_from_name(&name, xkb::KEYSYM_CASE_INSENSITIVE).raw() {
+                KeySyms::KEY_NoSymbol => Err(<D::Error as Error>::invalid_value(
+                    Unexpected::Str(&name),
+                    &"One of the keysym names of xkbcommon.h without the 'KEY_' prefix",
+                )),
+                x => {
+                    warn!(
+                        "Key-Binding '{}' only matched case insensitive for {:?}",
+                        name,
+                        xkb::keysym_get_name(x.into())
+                    );
+                    Ok(x.into())
+                }
             }
-        },
-        x => Ok(x),
+        }
+        x => Ok(x.into()),
     }
 }
 
 #[allow(non_snake_case)]
-pub fn serialize_Keysym<S>(keysym: &u32, serializer: S) -> Result<S::Ok, S::Error>
+pub fn serialize_Keysym<S>(keysym: &Keysym, serializer: S) -> Result<S::Ok, S::Error>
 where
     S: Serializer,
 {

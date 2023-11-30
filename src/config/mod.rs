@@ -10,7 +10,7 @@ use indexmap::IndexMap;
 use ron::ser::PrettyConfig;
 use serde::{Deserialize, Serialize};
 use smithay::{
-    input::keyboard::xkb,
+    input::keyboard::{xkb::keysyms, Keysym},
     utils::{Physical, Size},
 };
 use tracing::{info, warn};
@@ -69,7 +69,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-            key: xkb::KEY_Return,
+            key: keysyms::KEY_Return.into(),
         },
         Action::Spawn(String::from("kitty")),
     );
@@ -77,7 +77,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super, KeyModifier::Shift]).into(),
-            key: xkb::KEY_q,
+            key: keysyms::KEY_q.into(),
         },
         Action::Quit,
     );
@@ -85,7 +85,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-            key: xkb::KEY_w,
+            key: keysyms::KEY_w.into(),
         },
         Action::Close,
     );
@@ -93,7 +93,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-            key: xkb::KEY_1,
+            key: keysyms::KEY_1.into(),
         },
         Action::Workspace(0),
     );
@@ -101,7 +101,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-            key: xkb::KEY_2,
+            key: keysyms::KEY_2.into(),
         },
         Action::Workspace(1),
     );
@@ -109,7 +109,7 @@ pub fn generate_config() -> PathBuf {
     keybinding_map.insert(
         KeyPattern {
             modifiers: KeyModifiersDef(vec![KeyModifier::Super]).into(),
-            key: xkb::KEY_3,
+            key: keysyms::KEY_3.into(),
         },
         Action::Workspace(2),
     );
@@ -215,7 +215,7 @@ pub struct KeyPattern {
     /// The actual key, that was pressed
     #[serde(deserialize_with = "deserialize_Keysym")]
     #[serde(serialize_with = "serialize_Keysym")]
-    pub key: u32,
+    pub key: Keysym,
 }
 
 #[derive(Debug, Deserialize, Clone, PartialEq, Eq, Serialize)]
