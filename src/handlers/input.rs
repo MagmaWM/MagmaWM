@@ -52,7 +52,7 @@ impl MagmaState<UdevData> {
                             state.debug.egui.handle_keyboard(
                                 &handle,
                                 event.state() == KeyState::Pressed,
-                                modifiers.clone(),
+                                *modifiers,
                             );
                             return FilterResult::Intercept(None);
                         }
@@ -112,7 +112,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
 
-                if let Some(action) = self.seat.get_keyboard().unwrap().input(
+                if let Some(Some(action)) = self.seat.get_keyboard().unwrap().input(
                     self,
                     event.key_code(),
                     event.state(),
@@ -124,7 +124,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                             state.debug.egui.handle_keyboard(
                                 &handle,
                                 event.state() == KeyState::Pressed,
-                                modifiers.clone(),
+                                *modifiers,
                             );
                             return FilterResult::Intercept(None);
                         }
@@ -139,9 +139,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                         FilterResult::Forward
                     },
                 ) {
-                    if let Some(action) = action {
-                        self.handle_action(action);
-                    }
+                    self.handle_action(action);
                 };
             }
             InputEvent::PointerMotion { event } => {

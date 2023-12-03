@@ -157,7 +157,7 @@ pub fn winit_dispatch(
     *full_redraw = full_redraw.saturating_sub(1);
     #[cfg(feature = "debug")]
     state.debug.fps.start();
-    
+
     let size = winitdata.backend.window_size();
     let damage = Rectangle::from_loc_and_size((0, 0), size);
 

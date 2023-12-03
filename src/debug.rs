@@ -39,6 +39,7 @@ pub struct MagmaDebug {
 }
 
 impl MagmaDebug {
+    #[allow(clippy::too_many_arguments)]
     pub fn global_ui<BackendData: Backend>(
         &mut self,
         gpu: Option<&DrmNode>,
