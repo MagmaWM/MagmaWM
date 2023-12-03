@@ -3,10 +3,8 @@ use std::{
     time::{Duration, Instant},
 };
 
-use egui::{
-    plot::{Bar, BarChart, Corner, Legend, Plot},
-    Color32,
-};
+use egui::Color32;
+use egui_plot::{Bar, BarChart, Corner, Legend, Plot};
 use smithay::{
     backend::{
         drm::DrmNode,

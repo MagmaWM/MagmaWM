@@ -62,12 +62,14 @@ impl MagmaState<UdevData> {
                                 && handle.raw_syms().contains(&binding.key)
                             {
                                 return FilterResult::Intercept(Some(action.clone()));
-                            } else if (xkb::KEY_XF86Switch_VT_1..=xkb::KEY_XF86Switch_VT_12)
-                                .contains(&handle.modified_sym())
+                            } else if (xkb::keysyms::KEY_XF86Switch_VT_1
+                                ..=xkb::keysyms::KEY_XF86Switch_VT_12)
+                                .contains(&handle.modified_sym().raw())
                             {
                                 // VTSwitch
-                                let vt =
-                                    (handle.modified_sym() - xkb::KEY_XF86Switch_VT_1 + 1) as i32;
+                                let vt = (handle.modified_sym().raw()
+                                    - xkb::keysyms::KEY_XF86Switch_VT_1
+                                    + 1) as i32;
                                 return FilterResult::Intercept(Some(Action::VTSwitch(vt)));
                             }
                         }

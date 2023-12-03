@@ -2,7 +2,7 @@ use std::{borrow::BorrowMut, cell::RefCell, collections::HashMap};
 
 use smithay::{
     backend::renderer::{
-        element::Element,
+        element::{Element, Kind},
         gles::{
             element::PixelShaderElement, GlesPixelProgram, GlesRenderer, Uniform, UniformName,
             UniformType,
@@ -115,6 +115,7 @@ impl BorderShader {
                         Uniform::new("radius", CONFIG.borders.radius + thickness + 2.0),
                         Uniform::new("gradientDirection", gradient_direction),
                     ],
+                    Kind::Unspecified,
                 )
             } else {
                 PixelShaderElement::new(
@@ -135,6 +136,7 @@ impl BorderShader {
                         Uniform::new("halfThickness", thickness * 0.5),
                         Uniform::new("gradientDirection", gradient_direction),
                     ],
+                    Kind::Unspecified,
                 )
             };
             elements.insert(window.clone(), elem.clone());

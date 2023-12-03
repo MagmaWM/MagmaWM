@@ -1,4 +1,4 @@
-use std::{collections::HashMap, os::fd::FromRawFd, path::PathBuf, time::Duration};
+use std::{collections::HashMap, io, path::PathBuf, time::Duration};
 
 use smithay::{
     backend::{
@@ -18,7 +18,7 @@ use smithay::{
             element::{
                 surface::WaylandSurfaceRenderElement,
                 texture::{TextureBuffer, TextureRenderElement},
-                AsRenderElements,
+                AsRenderElements, Kind,
             },
             gles::GlesTexture,
             glow::GlowRenderer,
@@ -38,14 +38,14 @@ use smithay::{
         },
         drm::{
             control::{crtc, ModeTypeFlags},
-            Device as DrmDeviceTrait, SystemError,
+            Device as DrmDeviceTrait,
         },
         input::Libinput,
-        nix::fcntl::OFlag,
+        rustix::fs::OFlags,
         wayland_server::{
             backend::GlobalId,
             protocol::{wl_output::WlOutput, wl_shm},
-            Display,
+            Display, DisplayHandle,
         },
     },
     utils::{DeviceFd, Point, Rectangle, Scale, Size, Transform},
@@ -108,8 +108,8 @@ pub struct Surface {
 
 pub fn init_udev() {
     let mut event_loop: EventLoop<CalloopData<UdevData>> = EventLoop::try_new().unwrap();
-    let mut display: Display<MagmaState<UdevData>> = Display::new().unwrap();
-
+    let display: Display<MagmaState<UdevData>> = Display::new().unwrap();
+    let mut display_handle: DisplayHandle = display.handle().clone();
     /*
      * Initialize session
      */
@@ -136,13 +136,8 @@ pub fn init_udev() {
         devices: HashMap::new(),
     };
 
-    let mut state = MagmaState::new(
-        event_loop.handle(),
-        event_loop.get_signal(),
-        &mut display,
-        data,
-    );
-    ScreencopyManagerState::new::<MagmaState<UdevData>>(&display.handle());
+    let mut state = MagmaState::new(event_loop.handle(), event_loop.get_signal(), display, data);
+    ScreencopyManagerState::new::<MagmaState<UdevData>>(&display_handle);
     /*
      * Add input source
      */
@@ -215,7 +210,7 @@ pub fn init_udev() {
                                     data.state.on_device_added(
                                         node,
                                         node.dev_path().unwrap(),
-                                        &mut data.display,
+                                        &mut data.display_handle,
                                     );
                                 }
                             });
@@ -237,7 +232,7 @@ pub fn init_udev() {
                 device_id,
                 path: path.to_owned(),
             },
-            &mut display,
+            &mut display_handle,
         );
     }
 
@@ -246,11 +241,14 @@ pub fn init_udev() {
         .insert_source(backend, |event, _, calloopdata| {
             calloopdata
                 .state
-                .on_udev_event(event, &mut calloopdata.display)
+                .on_udev_event(event, &mut calloopdata.display_handle)
         })
         .unwrap();
 
-    let mut calloopdata = CalloopData { state, display };
+    let mut calloopdata = CalloopData {
+        state,
+        display_handle,
+    };
 
     std::env::set_var("WAYLAND_DISPLAY", &calloopdata.state.socket_name);
 
@@ -270,7 +268,7 @@ pub fn init_udev() {
                 .workspaces
                 .all_windows()
                 .for_each(|e| e.refresh());
-            data.display.flush_clients().unwrap();
+            data.display_handle.flush_clients().unwrap();
             data.state.popup_manager.cleanup();
         })
         .unwrap();
@@ -306,7 +304,7 @@ pub fn primary_gpu(seat: &str) -> (DrmNode, PathBuf) {
 
 // Udev
 impl MagmaState<UdevData> {
-    pub fn on_udev_event(&mut self, event: UdevEvent, display: &mut Display<MagmaState<UdevData>>) {
+    pub fn on_udev_event(&mut self, event: UdevEvent, display: &mut DisplayHandle) {
         match event {
             UdevEvent::Added { device_id, path } => {
                 if let Ok(node) = DrmNode::from_dev_id(device_id) {
@@ -326,22 +324,17 @@ impl MagmaState<UdevData> {
         }
     }
 
-    fn on_device_added(
-        &mut self,
-        node: DrmNode,
-        path: PathBuf,
-        display: &mut Display<MagmaState<UdevData>>,
-    ) {
+    fn on_device_added(&mut self, node: DrmNode, path: PathBuf, display: &mut DisplayHandle) {
         let fd = self
             .backend_data
             .session
             .open(
                 &path,
-                OFlag::O_RDWR | OFlag::O_CLOEXEC | OFlag::O_NOCTTY | OFlag::O_NONBLOCK,
+                OFlags::RDWR | OFlags::CLOEXEC | OFlags::NOCTTY | OFlags::NONBLOCK,
             )
             .unwrap();
 
-        let fd = DrmDeviceFd::new(unsafe { DeviceFd::from_raw_fd(fd) });
+        let fd = DrmDeviceFd::new(DeviceFd::from(fd));
 
         let (drm, drm_notifier) = drm::DrmDevice::new(fd, false).unwrap();
 
@@ -385,7 +378,7 @@ impl MagmaState<UdevData> {
         self.on_device_changed(node, display);
     }
 
-    fn on_device_changed(&mut self, node: DrmNode, display: &mut Display<MagmaState<UdevData>>) {
+    fn on_device_changed(&mut self, node: DrmNode, display: &mut DisplayHandle) {
         if let Some(device) = self.backend_data.devices.get_mut(&node) {
             for event in device.drm_scanner.scan_connectors(&device.drm) {
                 self.on_connector_event(node, event, display);
@@ -436,7 +429,7 @@ impl MagmaState<UdevData> {
         &mut self,
         node: DrmNode,
         event: DrmScanEvent,
-        display: &mut Display<MagmaState<UdevData>>,
+        display: &mut DisplayHandle,
     ) {
         let device = if let Some(device) = self.backend_data.devices.get_mut(&node) {
             device
@@ -504,7 +497,7 @@ impl MagmaState<UdevData> {
                         model,
                     },
                 );
-                let global = output.create_global::<MagmaState<UdevData>>(&display.handle());
+                let global = output.create_global::<MagmaState<UdevData>>(display);
                 let output_mode = WlMode::from(drm_mode);
                 output.set_preferred(output_mode);
                 output.change_current_state(
@@ -531,13 +524,7 @@ impl MagmaState<UdevData> {
                     }
                 };
 
-                let mut planes = match drm_surface.planes() {
-                    Ok(planes) => planes,
-                    Err(err) => {
-                        warn!("Failed to query surface planes: {}", err);
-                        return;
-                    }
-                };
+                let mut planes = drm_surface.planes().clone();
 
                 // Using an overlay plane on a nvidia card breaks
                 if driver
@@ -639,6 +626,7 @@ impl MagmaState<UdevData> {
                         None,
                         None,
                         None,
+                        Kind::Cursor,
                     ),
                 ),
             ]);
@@ -768,7 +756,7 @@ impl MagmaState<UdevData> {
                     // Calculate drawing area after output transform.
                     let damage = transform.transform_rect_in(region, &output_size);
 
-                    frame_result
+                    let _ = frame_result
                         .blit_frame_result(
                             damage.size,
                             transform,
@@ -838,13 +826,20 @@ impl MagmaState<UdevData> {
                 warn!("Error during rendering: {:?}", err);
                 match err {
                     SwapBuffersError::AlreadySwapped => false,
-                    SwapBuffersError::TemporaryFailure(err) => !matches!(
+                    SwapBuffersError::TemporaryFailure(err)
+                        if matches!(
+                            err.downcast_ref::<DrmError>(),
+                            Some(&DrmError::DeviceInactive)
+                        ) =>
+                    {
+                        false
+                    }
+                    SwapBuffersError::TemporaryFailure(err) => matches!(
                         err.downcast_ref::<DrmError>(),
-                        Some(&DrmError::DeviceInactive)
-                            | Some(&DrmError::Access {
-                                source: SystemError::PermissionDenied,
-                                ..
-                            })
+                        Some(DrmError::Access {
+                            source,
+                            ..
+                        }) if source.kind() == io::ErrorKind::PermissionDenied
                     ),
                     SwapBuffersError::ContextLost(err) => {
                         warn!("Rendering loop lost: {}", err);
