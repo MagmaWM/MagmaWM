@@ -20,8 +20,7 @@ egui = { version = "0.23", optional = true }
 egui_plot = { version = "0.23", optional = true }
 
 [dependencies.smithay]
-version = "0.3"
-git = "https://github.com/smithay/smithay.git"
+git = "https://github.com/Smithay/smithay.git"
 default-features = false
 features = [
     "backend_winit",
