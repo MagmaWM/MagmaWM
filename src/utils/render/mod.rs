@@ -1,25 +1,29 @@
+use std::borrow::BorrowMut;
+
 use smithay::{
     backend::renderer::{
         element::{
             surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
             RenderElement,
         },
-        gles::element::PixelShaderElement,
-        glow::GlowRenderer,
+        gles::{element::PixelShaderElement, GlesFrame},
+        glow::{GlowFrame, GlowRenderer},
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
         ImportAll, ImportMem, Renderer, Texture,
     },
     utils::{Buffer, Physical, Rectangle, Scale},
 };
+
+use self::{border::BorderShader, corners::CornerShader};
 pub mod border;
+pub mod corners;
 
 pub type GlMultiRenderer<'a, 'b> =
     MultiRenderer<'a, 'a, 'b, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
 pub type GlMultiFrame<'a, 'b, 'frame> =
     MultiFrame<'a, 'a, 'b, 'frame, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
 
-#[derive(Debug)]
 pub enum CustomRenderElements<R>
 where
     R: Renderer,
@@ -233,7 +237,6 @@ impl<'a, 'b> AsGlowRenderer for GlMultiRenderer<'a, 'b> {
     }
 }
 
-#[derive(Debug)]
 pub struct WindowRenderElement<R>
 where
     R: Renderer,
@@ -321,7 +324,11 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
     ) -> Result<(), <GlowRenderer as Renderer>::Error> {
-        self.inner.draw(frame, src, dst, damage)
+        let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame);
+        framegl.override_default_tex_program(CornerShader::get(framegl.egl_context()), vec![]);
+        let res = self.inner.draw(frame, src, dst, damage);
+        <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
+        res
     }
 
     fn underlying_storage(
@@ -355,8 +362,12 @@ where
         let mut elements: Vec<C> = elements.into_iter().map(C::from).collect();
         elements.push(C::from(win));
         elements
-    }
-    else {
+    } else {
         elements.into_iter().map(C::from).collect()
     }
+}
+
+pub fn init_shaders(renderer: &mut GlowRenderer) {
+    BorderShader::init(renderer);
+    CornerShader::init(renderer);
 }

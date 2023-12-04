@@ -61,7 +61,7 @@ use crate::{
     delegate_screencopy_manager,
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{border::BorderShader, CustomRenderElements},
+    utils::render::{border::BorderShader, init_shaders, CustomRenderElements},
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
@@ -563,7 +563,7 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-                BorderShader::init(renderer.as_mut());
+                init_shaders(renderer.as_mut());
                 let surface = Surface {
                     _device_id: node,
                     _render_node: device.render_node,
