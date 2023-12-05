@@ -3,6 +3,7 @@ use std::{collections::HashMap, io, path::PathBuf, time::Duration};
 use smithay::{
     backend::{
         allocator::{
+            dmabuf::Dmabuf,
             gbm::{self, GbmAllocator, GbmBufferFlags, GbmDevice},
             Fourcc,
         },
@@ -23,12 +24,13 @@ use smithay::{
             gles::GlesTexture,
             glow::GlowRenderer,
             multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
-            Bind, BufferType, ExportMem, Offscreen,
+            Bind, BufferType, ExportMem, ImportDma, ImportEgl, Offscreen,
         },
         session::{libseat::LibSeatSession, Event as SessionEvent, Session},
         udev::{self, UdevBackend, UdevEvent},
         SwapBuffersError,
     },
+    delegate_dmabuf,
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
@@ -49,7 +51,11 @@ use smithay::{
         },
     },
     utils::{DeviceFd, Point, Rectangle, Scale, Size, Transform},
-    wayland::{shell::wlr_layer::Layer, shm},
+    wayland::{
+        dmabuf::{DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState, ImportNotifier},
+        shell::wlr_layer::Layer,
+        shm,
+    },
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -78,10 +84,37 @@ pub type GbmDrmCompositor =
 
 pub struct UdevData {
     pub session: LibSeatSession,
-    _primary_gpu: DrmNode,
+    primary_gpu: DrmNode,
     gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
     devices: HashMap<DrmNode, Device>,
+    dmabuf_state: Option<(DmabufState, DmabufGlobal)>,
 }
+
+impl DmabufHandler for MagmaState<UdevData> {
+    fn dmabuf_state(&mut self) -> &mut DmabufState {
+        &mut self.backend_data.dmabuf_state.as_mut().unwrap().0
+    }
+
+    fn dmabuf_imported(
+        &mut self,
+        _global: &DmabufGlobal,
+        dmabuf: Dmabuf,
+        notifier: ImportNotifier,
+    ) {
+        if self
+            .backend_data
+            .gpus
+            .single_renderer(&self.backend_data.primary_gpu)
+            .and_then(|mut renderer| renderer.import_dmabuf(&dmabuf, None))
+            .is_ok()
+        {
+            let _ = notifier.successful::<MagmaState<UdevData>>();
+        } else {
+            notifier.failed();
+        }
+    }
+}
+delegate_dmabuf!(MagmaState<UdevData>);
 
 impl Backend for UdevData {
     fn seat_name(&self) -> String {
@@ -131,9 +164,10 @@ pub fn init_udev() {
 
     let data = UdevData {
         session,
-        _primary_gpu: primary_gpu,
+        primary_gpu,
         gpus,
         devices: HashMap::new(),
+        dmabuf_state: None,
     };
 
     let mut state = MagmaState::new(event_loop.handle(), event_loop.get_signal(), display, data);
@@ -244,6 +278,32 @@ pub fn init_udev() {
                 .on_udev_event(event, &mut calloopdata.display_handle)
         })
         .unwrap();
+
+    let mut renderer = state
+        .backend_data
+        .gpus
+        .single_renderer(&primary_gpu)
+        .unwrap();
+    info!(
+        ?primary_gpu,
+        "Trying to initialize EGL Hardware Acceleration",
+    );
+    match renderer.bind_wl_display(&display_handle) {
+        Ok(_) => info!("EGL hardware-acceleration enabled"),
+        Err(err) => info!(?err, "Failed to initialize EGL hardware-acceleration"),
+    }
+
+    // init dmabuf support with format list from our primary gpu
+    let dmabuf_formats = renderer.dmabuf_formats().collect::<Vec<_>>();
+    let default_feedback = DmabufFeedbackBuilder::new(primary_gpu.dev_id(), dmabuf_formats)
+        .build()
+        .unwrap();
+    let mut dmabuf_state = DmabufState::new();
+    let global = dmabuf_state.create_global_with_default_feedback::<MagmaState<UdevData>>(
+        &display_handle,
+        &default_feedback,
+    );
+    state.backend_data.dmabuf_state = Some((dmabuf_state, global));
 
     let mut calloopdata = CalloopData {
         state,
