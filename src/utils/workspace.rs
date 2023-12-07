@@ -14,7 +14,7 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
-use crate::state::CONFIG;
+use crate::{state::CONFIG, layouts::{Layout, dwindle::DwindleLayout}};
 
 use super::{
     binarytree::BinaryTree,
@@ -42,6 +42,7 @@ pub struct Workspace {
     windows: Vec<Rc<RefCell<MagmaWindow>>>,
     outputs: Vec<Output>,
     pub layout_tree: BinaryTree,
+    pub layout: Box<dyn Layout>,
 }
 
 impl Workspace {
@@ -50,6 +51,7 @@ impl Workspace {
             windows: Vec::new(),
             outputs: Vec::new(),
             layout_tree: BinaryTree::new(),
+            layout: Box::new(DwindleLayout::new(false))
         }
     }
 
