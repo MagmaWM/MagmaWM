@@ -242,15 +242,36 @@ pub fn winit_dispatch(
     }
 
     *full_redraw = full_redraw.saturating_sub(1);
+    #[cfg(feature = "debug")]
+    state.debug.fps.start();
 
     let size = winitdata.backend.window_size();
     let damage = Rectangle::from_loc_and_size((0, 0), size);
 
-    winitdata.backend.bind().unwrap();
-
     let mut renderelements: Vec<CustomRenderElements<_>> = vec![];
     let workspace = state.workspaces.current_mut();
     let output = workspace.outputs().next().unwrap();
+    #[cfg(feature = "debug")]
+    if state.debug.active {
+        renderelements.push(
+            state
+                .debug
+                .global_ui(
+                    None,
+                    output,
+                    &state.seat,
+                    winitdata.backend.renderer(),
+                    Rectangle::from_loc_and_size(
+                        (0, 0),
+                        output.current_mode().unwrap().size.to_logical(1),
+                    ),
+                    1.0,
+                    0.8,
+                )
+                .unwrap()
+                .into(),
+        );
+    }
     let layer_map = layer_map_for_output(output);
     let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
         .layers()
@@ -296,7 +317,9 @@ pub fn winit_dispatch(
                 )
             }),
     );
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.elements();
+    winitdata.backend.bind().unwrap();
     winitdata
         .damage_tracker
         .render_output(
@@ -306,9 +329,11 @@ pub fn winit_dispatch(
             [0.1, 0.1, 0.1, 1.0],
         )
         .unwrap();
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.render();
     winitdata.backend.submit(Some(&[damage])).unwrap();
-
+    #[cfg(feature = "debug")]
+    state.debug.fps.displayed();
     workspace.windows().for_each(|window| {
         window.send_frame(
             output,

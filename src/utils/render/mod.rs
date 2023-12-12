@@ -4,7 +4,7 @@ use smithay::{
             surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
             RenderElement,
         },
-        gles::element::PixelShaderElement,
+        gles::{element::PixelShaderElement, GlesTexture},
         glow::GlowRenderer,
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
@@ -22,7 +22,7 @@ pub enum CustomRenderElements<R>
 where
     R: Renderer,
 {
-    Texture(TextureRenderElement<<R as Renderer>::TextureId>),
+    Texture(TextureRenderElement<GlesTexture>),
     Surface(WaylandSurfaceRenderElement<R>),
     Shader(PixelShaderElement),
 }
@@ -114,7 +114,8 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
     ) -> Result<(), <GlMultiRenderer<'a, 'b> as Renderer>::Error> {
         match self {
             CustomRenderElements::Texture(elem) => {
-                RenderElement::<GlMultiRenderer>::draw(elem, frame, src, dst, damage)
+                RenderElement::<GlowRenderer>::draw(elem, frame.as_mut(), src, dst, damage)
+                    .map_err(MultiError::Render)
             }
             CustomRenderElements::Surface(elem) => elem.draw(frame, src, dst, damage),
             CustomRenderElements::Shader(elem) => {
@@ -129,7 +130,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
         renderer: &mut GlMultiRenderer<'a, 'b>,
     ) -> Option<smithay::backend::renderer::element::UnderlyingStorage> {
         match self {
-            CustomRenderElements::Texture(elem) => elem.underlying_storage(renderer),
+            CustomRenderElements::Texture(elem) => elem.underlying_storage(renderer.as_mut()),
             CustomRenderElements::Surface(elem) => elem.underlying_storage(renderer),
             CustomRenderElements::Shader(elem) => elem.underlying_storage(renderer.as_mut()),
         }
@@ -155,11 +156,11 @@ impl RenderElement<GlowRenderer> for CustomRenderElements<GlowRenderer> {
         }
     }
 }
-impl<R> From<TextureRenderElement<<R as Renderer>::TextureId>> for CustomRenderElements<R>
+impl<R> From<TextureRenderElement<GlesTexture>> for CustomRenderElements<R>
 where
-    R: Renderer,
+    R: Renderer + AsGlowRenderer,
 {
-    fn from(value: TextureRenderElement<<R as Renderer>::TextureId>) -> Self {
+    fn from(value: TextureRenderElement<GlesTexture>) -> Self {
         CustomRenderElements::Texture(value)
     }
 }

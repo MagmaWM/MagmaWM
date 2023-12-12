@@ -23,7 +23,7 @@ use smithay::{
             },
             gles::GlesTexture,
             glow::GlowRenderer,
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer},
             Bind, BufferType, ExportMem, ImportDma, ImportEgl, Offscreen,
         },
         session::{libseat::LibSeatSession, Event as SessionEvent, Session},
@@ -136,7 +136,7 @@ pub struct Surface {
     global: GlobalId,
     compositor: GbmDrmCompositor,
     output: Output,
-    pointer_texture: TextureBuffer<MultiTexture>,
+    pointer_texture: TextureBuffer<GlesTexture>,
 }
 
 pub fn init_udev() {
@@ -477,6 +477,8 @@ impl MagmaState<UdevData> {
                 let device = self.backend_data.devices.get_mut(&node).unwrap();
                 let surface = device.surfaces.get_mut(&crtc).unwrap();
                 surface.compositor.frame_submitted().ok();
+                #[cfg(feature = "debug")]
+                self.debug.fps.displayed();
                 self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
@@ -613,7 +615,7 @@ impl MagmaState<UdevData> {
                 .unwrap();
 
                 let pointer_texture = TextureBuffer::from_memory(
-                    &mut renderer,
+                    renderer.as_mut(),
                     CURSOR_DATA,
                     Fourcc::Abgr8888,
                     (64, 64),
@@ -658,6 +660,8 @@ impl MagmaState<UdevData> {
         crtc: crtc::Handle,
         screencopy: Option<Screencopy>,
     ) -> Result<bool, SwapBuffersError> {
+        #[cfg(feature = "debug")]
+        self.debug.fps.start();
         let device = self.backend_data.devices.get_mut(&node).unwrap();
         let surface = device.surfaces.get_mut(&crtc).unwrap();
         let mut renderer = self
@@ -687,7 +691,26 @@ impl MagmaState<UdevData> {
                 ),
             ]);
         }
-
+        #[cfg(feature = "debug")]
+        if self.debug.active {
+            renderelements.push(
+                self.debug
+                    .global_ui(
+                        Some(&node),
+                        output,
+                        &self.seat,
+                        renderer.as_mut(),
+                        Rectangle::from_loc_and_size(
+                            (0, 0),
+                            output.current_mode().unwrap().size.to_logical(1),
+                        ),
+                        1.0,
+                        0.8,
+                    )
+                    .unwrap()
+                    .into(),
+            );
+        }
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()
@@ -741,6 +764,8 @@ impl MagmaState<UdevData> {
                     .map(CustomRenderElements::Surface)
                 }),
         );
+        #[cfg(feature = "debug")]
+        self.debug.fps.elements();
 
         let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
             .compositor
@@ -754,6 +779,8 @@ impl MagmaState<UdevData> {
                 ) => err.into(),
                 _ => unreachable!(),
             });
+        #[cfg(feature = "debug")]
+        self.debug.fps.render();
 
         // Copy framebuffer for screencopy.
         if let Some(mut screencopy) = screencopy {
@@ -832,6 +859,8 @@ impl MagmaState<UdevData> {
             } else {
                 screencopy.failed()
             }
+            #[cfg(feature = "debug")]
+            self.debug.fps.screencopy();
         }
 
         let mut result = match frame_result {
