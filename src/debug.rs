@@ -50,12 +50,11 @@ impl MagmaDebug {
         scale: f64,
         alpha: f32,
     ) -> Result<TextureRenderElement<GlesTexture>, GlesError> {
-        let (max, min, avg, avg_fps, potential_fps) = (
+        let (max, min, avg, avg_fps) = (
             self.fps.max_frametime().as_secs_f64(),
             self.fps.min_frametime().as_secs_f64(),
             self.fps.avg_frametime().as_secs_f64(),
             self.fps.avg_fps(),
-            self.fps.potential_fps(),
         );
         let (bars_elements, bars_render, bars_screencopy, bars_displayed): (
             Vec<Bar>,
@@ -99,19 +98,23 @@ impl MagmaDebug {
                             "MagmaWM version {}",
                             std::env!("CARGO_PKG_VERSION")
                         ));
-                        if let Some(hash) = std::option_env!("GIT_HASH").and_then(|x| x.get(0..10))
+                        if let Some(hash) = std::process::Command::new("git")
+                            .args(&["rev-parse", "--short", "HEAD"])
+                            .output()
+                            .ok()
+                            .and_then(|out| {
+                                if out.status.success() {
+                                    String::from_utf8(out.stdout).ok()
+                                } else {
+                                    None
+                                }
+                            })
                         {
                             ui.label(format!("git: {hash}"));
                         }
                         ui.set_max_width(300.0);
                         ui.separator();
-                        ui.label(
-                            egui::RichText::new(format!(
-                                "FPS: {:>7.3}/{:>7.3}",
-                                avg_fps, potential_fps
-                            ))
-                            .heading(),
-                        );
+                        ui.label(egui::RichText::new(format!("FPS: {:>7.3}", avg_fps)).heading());
                         ui.label("Frame Times:");
                         ui.label(egui::RichText::new(format!("avg: {:>7.6}", avg)).code());
                         ui.label(egui::RichText::new(format!("min: {:>7.6}", min)).code());
@@ -404,10 +407,6 @@ impl Fps {
         }
         .as_secs_f64();
         1.0 / (secs / self.frames.len() as f64)
-    }
-
-    pub fn potential_fps(&self) -> f64 {
-        1.0 / self.avg_frametime().as_secs_f64()
     }
 
     pub fn max_frametime(&self) -> Duration {
