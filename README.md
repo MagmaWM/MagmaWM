@@ -15,7 +15,7 @@
 
 ## About
 
-**MagmaWM** is a versatile and customizable window manager / [Wayland compositor](https://wayland.freedesktop.org/), currently in development and actively seeking contributions from the community. Built with the [Smithay](https://github.com/Smithay/smithay) library and programmed in [Rust](https://www.rust-lang.org/), MagmaWM along with it's RON config provides users with flexibility and customization options. MagmaWM is licensed under GPLv3, ensuring that it remains open-source and free for all to use and contribute to.
+**MagmaWM** is a versatile and customizable window manager / [Wayland compositor](https://wayland.freedesktop.org/), currently in development and actively seeking contributions from the community. Built with the [Smithay](https://github.com/Smithay/smithay) library and programmed in [Rust](https://www.rust-lang.org/), MagmaWM along with it's RON config provides users with flexibility and customization options. MagmaWM is licensed under MIT, ensuring that it remains open-source and free for all to use and contribute to.
 
 Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 

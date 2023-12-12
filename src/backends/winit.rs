@@ -2,9 +2,15 @@ use std::time::Duration;
 
 use smithay::{
     backend::{
-        renderer::{damage::OutputDamageTracker, element::AsRenderElements, glow::GlowRenderer},
+        allocator::dmabuf::Dmabuf,
+        egl::EGLDevice,
+        renderer::{
+            damage::OutputDamageTracker, element::AsRenderElements, glow::GlowRenderer, ImportDma,
+            ImportEgl,
+        },
         winit::{self, WinitEvent, WinitEventLoop, WinitGraphicsBackend},
     },
+    delegate_dmabuf,
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode, Output, PhysicalProperties, Subpixel},
     reexports::{
@@ -16,14 +22,47 @@ use smithay::{
         winit::platform::pump_events::PumpStatus,
     },
     utils::{Rectangle, Scale, Transform},
-    wayland::shell::wlr_layer::Layer,
+    wayland::{
+        dmabuf::{
+            DmabufFeedback, DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState,
+            ImportNotifier,
+        },
+        shell::wlr_layer::Layer,
+    },
 };
-use tracing::info;
+use tracing::{info, warn};
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
+    dmabuf_state: (DmabufState, DmabufGlobal, Option<DmabufFeedback>),
 }
+
+impl DmabufHandler for MagmaState<WinitData> {
+    fn dmabuf_state(&mut self) -> &mut DmabufState {
+        &mut self.backend_data.dmabuf_state.0
+    }
+
+    fn dmabuf_imported(
+        &mut self,
+        _global: &DmabufGlobal,
+        dmabuf: Dmabuf,
+        notifier: ImportNotifier,
+    ) {
+        if self
+            .backend_data
+            .backend
+            .renderer()
+            .import_dmabuf(&dmabuf, None)
+            .is_ok()
+        {
+            let _ = notifier.successful::<MagmaState<WinitData>>();
+        } else {
+            notifier.failed();
+        }
+    }
+}
+delegate_dmabuf!(MagmaState<WinitData>);
 
 impl Backend for WinitData {
     fn seat_name(&self) -> String {
@@ -40,7 +79,7 @@ pub fn init_winit() {
 
     let display: Display<MagmaState<WinitData>> = Display::new().unwrap();
 
-    let (backend, mut winit) = winit::init().unwrap();
+    let (mut backend, mut winit) = winit::init::<GlowRenderer>().unwrap();
 
     let mode = Mode {
         size: backend.window_size(),
@@ -67,9 +106,57 @@ pub fn init_winit() {
 
     let damage_tracked_renderer = OutputDamageTracker::from_output(&output);
 
+    let render_node = EGLDevice::device_for_display(backend.renderer().egl_context().display())
+        .and_then(|device| device.try_get_render_node());
+
+    let dmabuf_default_feedback = match render_node {
+        Ok(Some(node)) => {
+            let dmabuf_formats = backend.renderer().dmabuf_formats().collect::<Vec<_>>();
+            let dmabuf_default_feedback = DmabufFeedbackBuilder::new(node.dev_id(), dmabuf_formats)
+                .build()
+                .unwrap();
+            Some(dmabuf_default_feedback)
+        }
+        Ok(None) => {
+            warn!("failed to query render node, dmabuf will use v3");
+            None
+        }
+        Err(err) => {
+            warn!(?err, "failed to egl device for display, dmabuf will use v3");
+            None
+        }
+    };
+
+    // if we failed to build dmabuf feedback we fall back to dmabuf v3
+    // Note: egl on Mesa requires either v4 or wl_drm (initialized with bind_wl_display)
+    let dmabuf_state = if let Some(default_feedback) = dmabuf_default_feedback {
+        let mut dmabuf_state = DmabufState::new();
+        let dmabuf_global = dmabuf_state
+            .create_global_with_default_feedback::<MagmaState<WinitData>>(
+                &display.handle(),
+                &default_feedback,
+            );
+        (dmabuf_state, dmabuf_global, Some(default_feedback))
+    } else {
+        let dmabuf_formats = backend.renderer().dmabuf_formats().collect::<Vec<_>>();
+        let mut dmabuf_state = DmabufState::new();
+        let dmabuf_global =
+            dmabuf_state.create_global::<MagmaState<WinitData>>(&display.handle(), dmabuf_formats);
+        (dmabuf_state, dmabuf_global, None)
+    };
+
+    if backend
+        .renderer()
+        .bind_wl_display(&display.handle())
+        .is_ok()
+    {
+        info!("EGL hardware-acceleration enabled");
+    };
+
     let winitdata = WinitData {
         backend,
         damage_tracker: damage_tracked_renderer,
+        dmabuf_state,
     };
     let display_handle: DisplayHandle = display.handle().clone();
     let state = MagmaState::new(

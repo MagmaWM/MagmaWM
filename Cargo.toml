@@ -32,7 +32,9 @@ features = [
     "renderer_glow",
     "backend_gbm",
     "backend_udev",
+    "backend_egl",
     "backend_libinput",
+    "use_system_lib",
 ]
 
 [dependencies.smithay-egui]

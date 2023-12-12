@@ -59,7 +59,7 @@ Be responsive to feedback and actively participate in the discussion during the 
 
 ### 7. Licensing
 
-By contributing to MagmaWM, you agree to license your contributions under the project's GPLv3 license. Make sure you have the necessary rights to the code you are contributing.
+By contributing to MagmaWM, you agree to license your contributions under the project's MIT license. Make sure you have the necessary rights to the code you are contributing.
 
 ## Conclusion
 
