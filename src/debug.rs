@@ -99,7 +99,7 @@ impl MagmaDebug {
                             std::env!("CARGO_PKG_VERSION")
                         ));
                         if let Some(hash) = std::process::Command::new("git")
-                            .args(&["rev-parse", "--short", "HEAD"])
+                            .args(["rev-parse", "--short", "HEAD"])
                             .output()
                             .ok()
                             .and_then(|out| {
