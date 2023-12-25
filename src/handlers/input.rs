@@ -246,11 +246,11 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 if self.debug.egui.wants_pointer() {
                     self.debug.egui.handle_pointer_axis(
                         event
-                            .amount_discrete(Axis::Horizontal)
+                            .amount_v120(Axis::Horizontal)
                             .or_else(|| event.amount(Axis::Horizontal).map(|x| x * 3.0))
                             .unwrap_or(0.0),
                         event
-                            .amount_discrete(Axis::Vertical)
+                            .amount_v120(Axis::Vertical)
                             .or_else(|| event.amount(Axis::Vertical).map(|x| x * 3.0))
                             .unwrap_or(0.0),
                     );
@@ -258,23 +258,20 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 }
                 let horizontal_amount =
                     event.amount(input::Axis::Horizontal).unwrap_or_else(|| {
-                        event
-                            .amount_discrete(input::Axis::Horizontal)
-                            .unwrap_or(0.0)
-                            * 3.0
+                        event.amount_v120(input::Axis::Horizontal).unwrap_or(0.0) * 3.0
                     });
                 let vertical_amount = event.amount(input::Axis::Vertical).unwrap_or_else(|| {
-                    event.amount_discrete(input::Axis::Vertical).unwrap_or(0.0) * 3.0
+                    event.amount_v120(input::Axis::Vertical).unwrap_or(0.0) * 3.0
                 });
-                let horizontal_amount_discrete = event.amount_discrete(input::Axis::Horizontal);
-                let vertical_amount_discrete = event.amount_discrete(input::Axis::Vertical);
+                let horizontal_amount_discrete = event.amount_v120(input::Axis::Horizontal);
+                let vertical_amount_discrete = event.amount_v120(input::Axis::Vertical);
 
                 {
                     let mut frame = AxisFrame::new(event.time_msec()).source(event.source());
                     if horizontal_amount != 0.0 {
                         frame = frame.value(Axis::Horizontal, horizontal_amount);
                         if let Some(discrete) = horizontal_amount_discrete {
-                            frame = frame.discrete(Axis::Horizontal, discrete as i32);
+                            frame = frame.v120(Axis::Horizontal, discrete as i32);
                         }
                     } else if event.source() == AxisSource::Finger {
                         frame = frame.stop(Axis::Horizontal);
@@ -282,7 +279,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     if vertical_amount != 0.0 {
                         frame = frame.value(Axis::Vertical, vertical_amount);
                         if let Some(discrete) = vertical_amount_discrete {
-                            frame = frame.discrete(Axis::Vertical, discrete as i32);
+                            frame = frame.v120(Axis::Vertical, discrete as i32);
                         }
                     } else if event.source() == AxisSource::Finger {
                         frame = frame.stop(Axis::Vertical);
