@@ -258,10 +258,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 }
                 let horizontal_amount =
                     event.amount(input::Axis::Horizontal).unwrap_or_else(|| {
-                        event
-                            .amount_v120(input::Axis::Horizontal)
-                            .unwrap_or(0.0)
-                            * 3.0
+                        event.amount_v120(input::Axis::Horizontal).unwrap_or(0.0) * 3.0
                     });
                 let vertical_amount = event.amount(input::Axis::Vertical).unwrap_or_else(|| {
                     event.amount_v120(input::Axis::Vertical).unwrap_or(0.0) * 3.0
