@@ -57,7 +57,7 @@
 	    cargoLock = {
               lockFile = ./Cargo.lock;
 	      outputHashes = {
-                "smithay-0.3.0" = "sha256-TR7c2wun0vQ1JyYOsyEVUKEdm1OtNW/XFZ/07HlZ7bk=";
+                "smithay-0.3.0" = "sha256-UQwYV3GOkZHEFyAMRMY46JiFXsdsjfSVHAHlA47ZAtI=";
 		"smithay-drm-extras-0.1.0" = "sha256-2DrVZ4FiCmAr3DlUfnlb4c1tkcG8ydVHYMG5FUvCTrI=";
 		"smithay-egui-0.1.0" = "sha256-FcSoKCwYk3okwQURiQlDUcfk9m/Ne6pSblGAzHDaVHg=";
 	      };
