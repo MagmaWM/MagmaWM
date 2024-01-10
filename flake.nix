@@ -21,9 +21,14 @@
 	  overlays = [ (import rust-overlay) ];
 	};
 	rust-toolchain = "stable";
+	rust-package = pkgs.rust-bin."${rust-toolchain}".latest.default;
+	
+	native-dependencies = with pkgs; [
+           pkg-config
+	   makeWrapper
+	];
 	
 	dependencies = with pkgs; [
-            rust-bin."${rust-toolchain}".latest.default
 	    libglvnd
 	    libseat
 	    wayland
@@ -40,10 +45,43 @@
 	    
 	  ];
 
+          # TODO: code this in a split file and import it
+	  magmawm = pkgs.rustPlatform.buildRustPackage {
+	    rust = rust-package;
+            pname = "magmawm";
+	    version = "0.0.1";
+	    src = ./.;
+	    buildInputs = dependencies;
+	    nativeBuildInputs = native-dependencies;
+
+	    cargoLock = {
+              lockFile = ./Cargo.lock;
+	      outputHashes = {
+                "smithay-0.3.0" = "sha256-TR7c2wun0vQ1JyYOsyEVUKEdm1OtNW/XFZ/07HlZ7bk=";
+		"smithay-drm-extras-0.1.0" = "sha256-2DrVZ4FiCmAr3DlUfnlb4c1tkcG8ydVHYMG5FUvCTrI=";
+		"smithay-egui-0.1.0" = "sha256-FcSoKCwYk3okwQURiQlDUcfk9m/Ne6pSblGAzHDaVHg=";
+	      };
+	    };
+
+	    postInstall = ''
+	      wrapProgram $out/bin/magmawm --prefix LD_LIBRARY_PATH : "${pkgs.libglvnd}/lib"
+	    '';
+	  };
+
       in {
 	devShells.default = pkgs.mkShell {
           buildInputs = dependencies;
+	  nativeBuildInputs = native-dependencies;
+
+	  packages = [
+            rust-package
+	  ];
+
+	  shellHook = ''
+            export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib"
+	  '';
 	};
+	packages.default = magmawm;
       };
     };
 }
