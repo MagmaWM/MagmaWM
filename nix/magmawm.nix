@@ -45,4 +45,11 @@ pkgs.rustPlatform.buildRustPackage {
   postInstall = ''
     wrapProgram $out/bin/magmawm --prefix LD_LIBRARY_PATH : "${pkgs.libglvnd}/lib"
   '';
+
+  meta = {
+    description = "A versatile and customizable Window Manager and Wayland Compositor";
+    homepage = "https://magmawm.org/";
+    license = lib.licenses.mit;
+    mainProgram = "magmawm";
+  };
 }
