@@ -1,51 +1,57 @@
 {
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
-    flake-parts.url = "github:hercules-ci/flake-parts";
     rust-overlay.url = "github:oxalica/rust-overlay";
   };
 
-  outputs = inputs@{ self, nixpkgs, flake-parts, rust-overlay, ... }:
-    flake-parts.lib.mkFlake
-      {
-        inherit inputs;
-      }
-      {
-        systems = [
-          "x86_64-linux"
-          "i686-linux"
-          "aarch64-linux"
+  outputs = { self, nixpkgs, rust-overlay, ... }:
+    let
+      forAllSystems = nixpkgs.lib.genAttrs [
+        "aarch64-linux"
+        "i686-linux"
+        "x86_64-linux"
+      ];
+
+      pkgsForSystem = system: (import nixpkgs {
+        inherit system;
+        overlays = [
+          (import rust-overlay)
+          self.overlays.default
         ];
-
-        perSystem = { system, ... }:
-          let
-            inherit (pkgs) lib;
-
-            version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
-
-            pkgs = import nixpkgs {
-              inherit system;
-              overlays = [ (import rust-overlay) ];
-            };
-
-            rust-toolchain = "stable";
-
-            magmawm = pkgs.callPackage ./nix/magmawm.nix {
-              inherit pkgs lib rust-toolchain version;
-            };
-
-          in
-          {
-            devShells.default = pkgs.mkShell {
-              inputsFrom = [ self.packages.${system}.magmawm ];
-              shellHook = ''
-                export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib"
-              '';
-            };
-
-            packages.default = self.packages.${system}.magmawm;
-            packages.magmawm = magmawm;
+      });
+    in
+    {
+      overlays.default = final: _prev:
+        let
+          version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
+          rust-toolchain = "stable";
+        in
+        {
+          magmawm = final.callPackage ./nix/magmawm.nix {
+            inherit (final) lib;
+            inherit rust-toolchain version;
+            pkgs = final;
           };
-      };
-}
+        };
 
+      packages = forAllSystems (system: {
+        inherit (pkgsForSystem system) magmawm;
+        default = self.packages.${system}.magmawm;
+      });
+
+      devShells = forAllSystems (system:
+        let
+          pkgs = pkgsForSystem system;
+        in
+        {
+          default = pkgs.mkShell {
+            name = "magmawm";
+            NIX_CONFIG = "experimental-features = nix-command flakes";
+            inputsFrom = [ self.packages.${system}.magmawm ];
+            shellHook = ''
+              export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib"
+            '';
+          };
+        });
+    };
+}
