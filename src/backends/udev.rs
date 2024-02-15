@@ -221,7 +221,7 @@ pub fn init_udev() {
                         .iter_mut()
                         .map(|(handle, backend)| (*handle, backend))
                     {
-                        backend.drm.activate();
+                        backend.drm.activate(true);
                         for (crtc, surface) in backend
                             .surfaces
                             .iter_mut()
