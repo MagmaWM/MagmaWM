@@ -10,6 +10,37 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
+  check:
+    needs:
+      - clippy-check
+      - format
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout sources
+        uses: actions/checkout@v2
+      - name: Cargo cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Rust toolchain
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+          profile: minimal
+          components: clippy
+          default: true
+      - name: System dependencies
+        run: sudo apt-get update; sudo apt-get install -y libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
+      - name: Check
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+
   format:
     runs-on: ubuntu-22.04
     steps:
@@ -65,37 +96,6 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -- -D warnings
-
-  check:
-    needs:
-      - clippy-check
-      - format
-    runs-on: ubuntu-22.04
-    steps:
-      - name: Checkout sources
-        uses: actions/checkout@v2
-      - name: Cargo cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Rust toolchain
-        uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-          override: true
-          profile: minimal
-          components: clippy
-          default: true
-      - name: System dependencies
-        run: sudo apt-get update; sudo apt-get install -y libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
-      - name: Check
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
 
   build:
     needs:
