@@ -77,3 +77,8 @@ If you really want to, run the following command to install MagmaWM:
 ```bash
 cargo install --path .
 ```
+
+## Troubleshooting
+
+### Getting logs
+Logs for MagmaWM can be found at `$HOME/.local/share/MagmaWM/`, when debugging a issue run MagmaWM with `RUST_LOG=debug`
