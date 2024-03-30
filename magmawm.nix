@@ -8,7 +8,7 @@
 pkgs.rustPlatform.buildRustPackage {
   inherit version;
   pname = "magmawm";
-  src = lib.cleanSource ./;
+  src = lib.cleanSource ./.;
 
   rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
 
