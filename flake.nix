@@ -28,7 +28,7 @@
           rust-toolchain = "stable";
         in
         {
-          magmawm = final.callPackage ./nix/magmawm.nix {
+          magmawm = final.callPackage ./magmawm.nix {
             inherit (final) lib;
             inherit rust-toolchain version;
             pkgs = final;
