@@ -19,9 +19,6 @@
 
 Join our [Discord](https://discord.gg/VM8DkxaHfa)!
 
-> We have been in heavy need of contributors recently due to maintainer problems, please consider contributing if you can.
-> View [#70](https://github.com/MagmaWM/MagmaWM/issues/70) for more information.
-
 ## Features
 
 - [x] RON Configuration
