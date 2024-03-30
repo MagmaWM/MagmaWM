@@ -8,7 +8,7 @@
 pkgs.rustPlatform.buildRustPackage {
   inherit version;
   pname = "magmawm";
-  src = lib.cleanSource ../.;
+  src = lib.cleanSource ./.;
 
   rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
 
@@ -34,7 +34,7 @@ pkgs.rustPlatform.buildRustPackage {
   ];
 
   cargoLock = {
-    lockFile = ../Cargo.lock;
+    lockFile = ./Cargo.lock;
     outputHashes = {
       "smithay-0.3.0" = "sha256-UQwYV3GOkZHEFyAMRMY46JiFXsdsjfSVHAHlA47ZAtI=";
       "smithay-drm-extras-0.1.0" = "sha256-2DrVZ4FiCmAr3DlUfnlb4c1tkcG8ydVHYMG5FUvCTrI=";
