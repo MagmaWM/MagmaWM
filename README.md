@@ -50,6 +50,7 @@ You will need to install MagmaWM's dependencies with your package manager of cho
 ```
 
 #### Arch and derivatives (EndeavourOS, Garuda, etc.)
+> **Manjaro is not supported.**
 ```bash
 # pacman -Syu udev wayland wayland-protocols libinput libxkbcommon libglvnd seatd dbus-glib mesa
 ```
