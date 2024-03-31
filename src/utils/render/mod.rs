@@ -316,8 +316,10 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
         let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut());
         framegl.override_default_tex_program(
             CornerShader::get(framegl.egl_context()),
-            vec![Uniform::new("size", [size.w as f32, size.h as f32]),
-            Uniform::new("radius", CONFIG.borders.radius as f32)]
+            vec![
+                Uniform::new("size", [size.w as f32, size.h as f32]),
+                Uniform::new("radius", CONFIG.borders.radius as f32),
+            ],
         );
         self.inner.draw(frame, src, dst, damage)?;
         <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
@@ -348,8 +350,10 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
         let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame);
         framegl.override_default_tex_program(
             CornerShader::get(framegl.egl_context()),
-            vec![Uniform::new("size", [size.w as f32, size.h as f32]),
-            Uniform::new("radius", CONFIG.borders.radius as f32)],
+            vec![
+                Uniform::new("size", [size.w as f32, size.h as f32]),
+                Uniform::new("radius", CONFIG.borders.radius as f32),
+            ],
         );
         self.inner.draw(frame, src, dst, damage)?;
         <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
