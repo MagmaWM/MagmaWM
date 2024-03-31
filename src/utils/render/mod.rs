@@ -6,6 +6,7 @@ use smithay::{
             surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
             RenderElement,
         },
+        gles::{element::PixelShaderElement, GlesFrame, GlesTexture, Uniform},
         glow::{GlowFrame, GlowRenderer},
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
@@ -324,11 +325,15 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
     ) -> Result<(), <GlowRenderer as Renderer>::Error> {
-        let size = self.geometry(Scale::from(1.0)).size.to_logical(Scale::from(1));
+        let size = self
+            .geometry(Scale::from(1.0))
+            .size
+            .to_logical(Scale::from(1));
         let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame);
-        framegl.override_default_tex_program(CornerShader::get(framegl.egl_context()), vec![
-            Uniform::new("size", [size.w as f32, size.h as f32]),
-        ]);
+        framegl.override_default_tex_program(
+            CornerShader::get(framegl.egl_context()),
+            vec![Uniform::new("size", [size.w as f32, size.h as f32])],
+        );
         let res = self.inner.draw(frame, src, dst, damage);
         <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
         res
