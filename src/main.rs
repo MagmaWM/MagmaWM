@@ -23,11 +23,13 @@ static POSSIBLE_BACKENDS: &[&str] = &[
 
 fn main() {
     // Setup logging
-    let log_dir = format!( // Get the log directory
+    let log_dir = format!(
+        // Get the log directory
         "{}/.local/share/MagmaWM/",
         std::env::var("HOME").expect("$HOME not set, exiting.")
     );
-    let file_appender = tracing_appender::rolling::never( // Create a file appender to log to
+    // Create a file appender to log to
+    let file_appender = tracing_appender::rolling::never(
         &log_dir,
         format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
     );
@@ -39,7 +41,8 @@ fn main() {
             .with_writer(log_appender)
             .with_env_filter(env_filter)
             .init();
-    } else { // If the log level is not set, use the default
+    } else {
+        // If the log level is not set, use the default
         tracing_subscriber::fmt().with_writer(log_appender).init();
     }
     // Set the panic hook
