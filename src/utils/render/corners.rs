@@ -3,7 +3,7 @@ use std::borrow::BorrowMut;
 use smithay::backend::{
     egl::EGLContext,
     renderer::{
-        gles::{GlesRenderer, GlesTexProgram},
+        gles::{GlesRenderer, GlesTexProgram, UniformName, UniformType},
         glow::GlowRenderer,
     },
 };
@@ -16,7 +16,9 @@ impl CornerShader {
     pub fn init(renderer: &mut GlowRenderer) {
         let renderer: &mut GlesRenderer = renderer.borrow_mut();
         let program = renderer
-            .compile_custom_texture_shader(CORNER_FRAG, &[])
+            .compile_custom_texture_shader(CORNER_FRAG, &[
+                UniformName::new("size", UniformType::_2f),
+            ])
             .unwrap();
         renderer
             .egl_context()
