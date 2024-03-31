@@ -110,14 +110,12 @@ impl Workspace {
                     element.borrow().rec.loc,
                 )));
             }
-            render_elements.append(&mut wrap_window_surface(
-                window.render_elements(
-                    renderer,
-                    element.borrow().render_location().to_physical(1),
-                    Scale::from(1.0),
-                    1.0,
-                ),
-            ));
+            render_elements.append(&mut wrap_window_surface(window.render_elements(
+                renderer,
+                element.borrow().render_location().to_physical(1),
+                Scale::from(1.0),
+                1.0,
+            )));
         }
         render_elements
     }
