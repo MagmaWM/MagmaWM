@@ -285,7 +285,7 @@ where
         self.inner.damage_since(scale, commit)
     }
 
-    fn opaque_regions(&self, scale: Scale<f64>) -> Vec<Rectangle<i32, Physical>> {
+    fn opaque_regions(&self, _scale: Scale<f64>) -> Vec<Rectangle<i32, Physical>> {
         // self.inner.opaque_regions(scale)
         vec![]
     }
@@ -318,7 +318,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
             CornerShader::get(framegl.egl_context()),
             vec![
                 Uniform::new("size", [size.w as f32, size.h as f32]),
-                Uniform::new("radius", CONFIG.borders.radius as f32),
+                Uniform::new("radius", CONFIG.borders.radius),
             ],
         );
         self.inner.draw(frame, src, dst, damage)?;
@@ -352,7 +352,7 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
             CornerShader::get(framegl.egl_context()),
             vec![
                 Uniform::new("size", [size.w as f32, size.h as f32]),
-                Uniform::new("radius", CONFIG.borders.radius as f32),
+                Uniform::new("radius", CONFIG.borders.radius),
             ],
         );
         self.inner.draw(frame, src, dst, damage)?;
