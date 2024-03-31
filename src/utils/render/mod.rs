@@ -286,7 +286,7 @@ where
     }
 
     fn opaque_regions(&self, _scale: Scale<f64>) -> Vec<Rectangle<i32, Physical>> {
-        // self.inner.opaque_regions(scale)
+        // PERF: actually compute opaque regions
         vec![]
     }
 
