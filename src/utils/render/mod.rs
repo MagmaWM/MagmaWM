@@ -6,7 +6,6 @@ use smithay::{
             surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
             RenderElement,
         },
-        gles::{element::PixelShaderElement, GlesFrame, GlesTexture, Uniform},
         glow::{GlowFrame, GlowRenderer},
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
