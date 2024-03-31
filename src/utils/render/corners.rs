@@ -18,7 +18,8 @@ impl CornerShader {
         let program = renderer
             .compile_custom_texture_shader(
                 CORNER_FRAG,
-                &[UniformName::new("size", UniformType::_2f)],
+                &[UniformName::new("size", UniformType::_2f),
+                UniformName::new("radius", UniformType::_1f)],
             )
             .unwrap();
         renderer
