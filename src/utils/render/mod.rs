@@ -284,7 +284,8 @@ where
     }
 
     fn opaque_regions(&self, scale: Scale<f64>) -> Vec<Rectangle<i32, Physical>> {
-        self.inner.opaque_regions(scale)
+        // self.inner.opaque_regions(scale)
+        vec![]
     }
 
     fn alpha(&self) -> f32 {
@@ -306,7 +307,19 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
     ) -> Result<(), <GlMultiRenderer<'a, 'b> as Renderer>::Error> {
-        self.inner.draw(frame, src, dst, damage)
+        let size = self
+            .geometry(Scale::from(1.0))
+            .size
+            .to_logical(Scale::from(1));
+        let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut());
+        framegl.override_default_tex_program(
+            CornerShader::get(framegl.egl_context()),
+            vec![Uniform::new("size", [size.w as f32, size.h as f32])],
+        );
+        let res = self.inner.draw(frame, src, dst, damage);
+        <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
+            .clear_tex_program_override();
+        res
     }
 
     fn underlying_storage(
