@@ -13,7 +13,7 @@ use smithay::{
             Display, DisplayHandle,
         },
     },
-    utils::{Logical, Point},
+    utils::{Logical, Point, Rectangle},
     wayland::{
         compositor::{CompositorClientState, CompositorState},
         output::OutputManagerState,
@@ -28,8 +28,11 @@ use smithay::{
 };
 use tracing::warn;
 
-use crate::config::{load_config, Config};
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
+use crate::{
+    config::{load_config, Config},
+    debug::MagmaDebug,
+};
 
 pub struct CalloopData<BackendData: Backend + 'static> {
     pub state: MagmaState<BackendData>,
@@ -67,6 +70,9 @@ pub struct MagmaState<BackendData: Backend + 'static> {
 
     pub workspaces: Workspaces,
     pub pointer_location: Point<f64, Logical>,
+
+    #[cfg(feature = "debug")]
+    pub debug: MagmaDebug,
 }
 
 impl<BackendData: Backend + 'static> MagmaState<BackendData> {
@@ -161,6 +167,15 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             seat,
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
+            #[cfg(feature = "debug")]
+            debug: MagmaDebug {
+                egui: smithay_egui::EguiState::new(Rectangle::from_loc_and_size(
+                    (0, 0),
+                    (800, 600),
+                )),
+                active: false,
+                fps: Default::default(),
+            },
         }
     }
 

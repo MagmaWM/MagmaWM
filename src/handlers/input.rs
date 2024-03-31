@@ -1,8 +1,9 @@
 use smithay::{
     backend::{
         input::{
-            self, AbsolutePositionEvent, Axis, AxisSource, Event, InputBackend, InputEvent,
-            KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent, PointerMotionEvent,
+            self, AbsolutePositionEvent, Axis, AxisSource, ButtonState, Event, InputBackend,
+            InputEvent, KeyState, KeyboardKeyEvent, PointerAxisEvent, PointerButtonEvent,
+            PointerMotionEvent,
         },
         libinput::LibinputInputBackend,
     },
@@ -37,7 +38,7 @@ impl MagmaState<UdevData> {
                     event.state(),
                     serial,
                     time,
-                    |_, modifiers, handle| {
+                    |state, modifiers, handle| {
                         let mut leds = Led::empty();
                         if modifiers.caps_lock {
                             leds.insert(Led::CAPSLOCK);
@@ -46,12 +47,21 @@ impl MagmaState<UdevData> {
                             leds.insert(Led::NUMLOCK);
                         }
                         event.device().led_update(leds);
+                        #[cfg(feature = "debug")]
+                        if state.debug.egui.wants_keyboard() {
+                            state.debug.egui.handle_keyboard(
+                                &handle,
+                                event.state() == KeyState::Pressed,
+                                *modifiers,
+                            );
+                            return FilterResult::Intercept(None);
+                        }
                         for (binding, action) in CONFIG.keybindings.iter() {
                             if event.state() == KeyState::Pressed
                                 && binding.modifiers == *modifiers
                                 && handle.raw_syms().contains(&binding.key)
                             {
-                                return FilterResult::Intercept(action.clone());
+                                return FilterResult::Intercept(Some(action.clone()));
                             } else if (xkb::keysyms::KEY_XF86Switch_VT_1
                                 ..=xkb::keysyms::KEY_XF86Switch_VT_12)
                                 .contains(&handle.modified_sym().raw())
@@ -60,15 +70,16 @@ impl MagmaState<UdevData> {
                                 let vt = (handle.modified_sym().raw()
                                     - xkb::keysyms::KEY_XF86Switch_VT_1
                                     + 1) as i32;
-                                return FilterResult::Intercept(Action::VTSwitch(vt));
+                                return FilterResult::Intercept(Some(Action::VTSwitch(vt)));
                             }
                         }
                         FilterResult::Forward
                     },
                 ) {
                     match action {
-                        Action::VTSwitch(vt) => return Some(vt),
-                        _ => self.handle_action(action),
+                        Some(Action::VTSwitch(vt)) => return Some(vt),
+                        Some(action) => self.handle_action(action),
+                        None => {}
                     }
                 };
                 None
@@ -89,23 +100,40 @@ impl MagmaState<UdevData> {
 impl<BackendData: Backend> MagmaState<BackendData> {
     pub fn process_input_event<I: InputBackend>(&mut self, event: InputEvent<I>) {
         match event {
+            #[cfg(feature = "debug")]
+            InputEvent::DeviceAdded { device } => {
+                self.debug.egui.handle_device_added(&device);
+            }
+            #[cfg(feature = "debug")]
+            InputEvent::DeviceRemoved { device } => {
+                self.debug.egui.handle_device_removed(&device);
+            }
             InputEvent::Keyboard { event, .. } => {
                 let serial = SERIAL_COUNTER.next_serial();
                 let time = Event::time_msec(&event);
 
-                if let Some(action) = self.seat.get_keyboard().unwrap().input(
+                if let Some(Some(action)) = self.seat.get_keyboard().unwrap().input(
                     self,
                     event.key_code(),
                     event.state(),
                     serial,
                     time,
-                    |_, modifiers, handle| {
+                    |state, modifiers, handle| {
+                        #[cfg(feature = "debug")]
+                        if state.debug.egui.wants_keyboard() {
+                            state.debug.egui.handle_keyboard(
+                                &handle,
+                                event.state() == KeyState::Pressed,
+                                *modifiers,
+                            );
+                            return FilterResult::Intercept(None);
+                        }
                         for (binding, action) in CONFIG.keybindings.iter() {
                             if event.state() == KeyState::Pressed
                                 && binding.modifiers == *modifiers
                                 && handle.raw_syms().contains(&binding.key)
                             {
-                                return FilterResult::Intercept(action.clone());
+                                return FilterResult::Intercept(Some(action.clone()));
                             }
                         }
                         FilterResult::Forward
@@ -148,6 +176,10 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                         },
                     )
                 }
+                #[cfg(feature = "debug")]
+                self.debug
+                    .egui
+                    .handle_pointer_motion(self.pointer_location.to_i32_round())
             }
             InputEvent::PointerMotionAbsolute { event, .. } => {
                 let output = self.workspaces.current().outputs().next().unwrap().clone();
@@ -175,6 +207,10 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                         time: event.time_msec(),
                     },
                 );
+                #[cfg(feature = "debug")]
+                self.debug
+                    .egui
+                    .handle_pointer_motion(self.pointer_location.to_i32_round())
             }
             InputEvent::PointerButton { event, .. } => {
                 let pointer = self.seat.get_pointer().unwrap();
@@ -186,7 +222,15 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 let button_state = event.state();
 
                 self.set_input_focus_auto();
-
+                #[cfg(feature = "debug")]
+                if self.debug.egui.wants_pointer() {
+                    if let Some(button) = event.button() {
+                        self.debug
+                            .egui
+                            .handle_pointer_button(button, event.state() == ButtonState::Pressed);
+                    }
+                    return;
+                }
                 pointer.button(
                     self,
                     &ButtonEvent {
@@ -198,25 +242,36 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                 );
             }
             InputEvent::PointerAxis { event, .. } => {
+                #[cfg(feature = "debug")]
+                if self.debug.egui.wants_pointer() {
+                    self.debug.egui.handle_pointer_axis(
+                        event
+                            .amount_v120(Axis::Horizontal)
+                            .or_else(|| event.amount(Axis::Horizontal).map(|x| x * 3.0))
+                            .unwrap_or(0.0),
+                        event
+                            .amount_v120(Axis::Vertical)
+                            .or_else(|| event.amount(Axis::Vertical).map(|x| x * 3.0))
+                            .unwrap_or(0.0),
+                    );
+                    return;
+                }
                 let horizontal_amount =
                     event.amount(input::Axis::Horizontal).unwrap_or_else(|| {
-                        event
-                            .amount_discrete(input::Axis::Horizontal)
-                            .unwrap_or(0.0)
-                            * 3.0
+                        event.amount_v120(input::Axis::Horizontal).unwrap_or(0.0) * 3.0
                     });
                 let vertical_amount = event.amount(input::Axis::Vertical).unwrap_or_else(|| {
-                    event.amount_discrete(input::Axis::Vertical).unwrap_or(0.0) * 3.0
+                    event.amount_v120(input::Axis::Vertical).unwrap_or(0.0) * 3.0
                 });
-                let horizontal_amount_discrete = event.amount_discrete(input::Axis::Horizontal);
-                let vertical_amount_discrete = event.amount_discrete(input::Axis::Vertical);
+                let horizontal_amount_discrete = event.amount_v120(input::Axis::Horizontal);
+                let vertical_amount_discrete = event.amount_v120(input::Axis::Vertical);
 
                 {
                     let mut frame = AxisFrame::new(event.time_msec()).source(event.source());
                     if horizontal_amount != 0.0 {
                         frame = frame.value(Axis::Horizontal, horizontal_amount);
                         if let Some(discrete) = horizontal_amount_discrete {
-                            frame = frame.discrete(Axis::Horizontal, discrete as i32);
+                            frame = frame.v120(Axis::Horizontal, discrete as i32);
                         }
                     } else if event.source() == AxisSource::Finger {
                         frame = frame.stop(Axis::Horizontal);
@@ -224,7 +279,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     if vertical_amount != 0.0 {
                         frame = frame.value(Axis::Vertical, vertical_amount);
                         if let Some(discrete) = vertical_amount_discrete {
-                            frame = frame.discrete(Axis::Vertical, discrete as i32);
+                            frame = frame.v120(Axis::Vertical, discrete as i32);
                         }
                     } else if event.source() == AxisSource::Finger {
                         frame = frame.stop(Axis::Vertical);
@@ -270,7 +325,8 @@ impl<BackendData: Backend> MagmaState<BackendData> {
     pub fn handle_action(&mut self, action: Action) {
         match action {
             Action::Quit => self.loop_signal.stop(),
-            Action::Debug => todo!(),
+            #[cfg(feature = "debug")]
+            Action::Debug => self.debug.active = !self.debug.active,
             Action::Close => {
                 if let Some(d) = self
                     .workspaces
