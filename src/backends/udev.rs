@@ -3,6 +3,7 @@ use std::{collections::HashMap, io, path::PathBuf, time::Duration};
 use smithay::{
     backend::{
         allocator::{
+            dmabuf::Dmabuf,
             gbm::{self, GbmAllocator, GbmBufferFlags, GbmDevice},
             Fourcc,
         },
@@ -22,13 +23,14 @@ use smithay::{
             },
             gles::GlesTexture,
             glow::GlowRenderer,
-            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer, MultiTexture},
-            Bind, BufferType, ExportMem, Offscreen,
+            multigpu::{gbm::GbmGlesBackend, GpuManager, MultiRenderer},
+            Bind, BufferType, ExportMem, ImportDma, ImportEgl, Offscreen,
         },
         session::{libseat::LibSeatSession, Event as SessionEvent, Session},
         udev::{self, UdevBackend, UdevEvent},
         SwapBuffersError,
     },
+    delegate_dmabuf,
     desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
     output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
@@ -49,7 +51,11 @@ use smithay::{
         },
     },
     utils::{DeviceFd, Point, Rectangle, Scale, Size, Transform},
-    wayland::{shell::wlr_layer::Layer, shm},
+    wayland::{
+        dmabuf::{DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState, ImportNotifier},
+        shell::wlr_layer::Layer,
+        shm,
+    },
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -78,10 +84,37 @@ pub type GbmDrmCompositor =
 
 pub struct UdevData {
     pub session: LibSeatSession,
-    _primary_gpu: DrmNode,
+    primary_gpu: DrmNode,
     gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
     devices: HashMap<DrmNode, Device>,
+    dmabuf_state: Option<(DmabufState, DmabufGlobal)>,
 }
+
+impl DmabufHandler for MagmaState<UdevData> {
+    fn dmabuf_state(&mut self) -> &mut DmabufState {
+        &mut self.backend_data.dmabuf_state.as_mut().unwrap().0
+    }
+
+    fn dmabuf_imported(
+        &mut self,
+        _global: &DmabufGlobal,
+        dmabuf: Dmabuf,
+        notifier: ImportNotifier,
+    ) {
+        if self
+            .backend_data
+            .gpus
+            .single_renderer(&self.backend_data.primary_gpu)
+            .and_then(|mut renderer| renderer.import_dmabuf(&dmabuf, None))
+            .is_ok()
+        {
+            let _ = notifier.successful::<MagmaState<UdevData>>();
+        } else {
+            notifier.failed();
+        }
+    }
+}
+delegate_dmabuf!(MagmaState<UdevData>);
 
 impl Backend for UdevData {
     fn seat_name(&self) -> String {
@@ -103,7 +136,7 @@ pub struct Surface {
     global: GlobalId,
     compositor: GbmDrmCompositor,
     output: Output,
-    pointer_texture: TextureBuffer<MultiTexture>,
+    pointer_texture: TextureBuffer<GlesTexture>,
 }
 
 pub fn init_udev() {
@@ -131,9 +164,10 @@ pub fn init_udev() {
 
     let data = UdevData {
         session,
-        _primary_gpu: primary_gpu,
+        primary_gpu,
         gpus,
         devices: HashMap::new(),
+        dmabuf_state: None,
     };
 
     let mut state = MagmaState::new(event_loop.handle(), event_loop.get_signal(), display, data);
@@ -244,6 +278,32 @@ pub fn init_udev() {
                 .on_udev_event(event, &mut calloopdata.display_handle)
         })
         .unwrap();
+
+    let mut renderer = state
+        .backend_data
+        .gpus
+        .single_renderer(&primary_gpu)
+        .unwrap();
+    info!(
+        ?primary_gpu,
+        "Trying to initialize EGL Hardware Acceleration",
+    );
+    match renderer.bind_wl_display(&display_handle) {
+        Ok(_) => info!("EGL hardware-acceleration enabled"),
+        Err(err) => info!(?err, "Failed to initialize EGL hardware-acceleration"),
+    }
+
+    // init dmabuf support with format list from our primary gpu
+    let dmabuf_formats = renderer.dmabuf_formats().collect::<Vec<_>>();
+    let default_feedback = DmabufFeedbackBuilder::new(primary_gpu.dev_id(), dmabuf_formats)
+        .build()
+        .unwrap();
+    let mut dmabuf_state = DmabufState::new();
+    let global = dmabuf_state.create_global_with_default_feedback::<MagmaState<UdevData>>(
+        &display_handle,
+        &default_feedback,
+    );
+    state.backend_data.dmabuf_state = Some((dmabuf_state, global));
 
     let mut calloopdata = CalloopData {
         state,
@@ -417,6 +477,8 @@ impl MagmaState<UdevData> {
                 let device = self.backend_data.devices.get_mut(&node).unwrap();
                 let surface = device.surfaces.get_mut(&crtc).unwrap();
                 surface.compositor.frame_submitted().ok();
+                #[cfg(feature = "debug")]
+                self.debug.fps.displayed();
                 self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
@@ -553,7 +615,7 @@ impl MagmaState<UdevData> {
                 .unwrap();
 
                 let pointer_texture = TextureBuffer::from_memory(
-                    &mut renderer,
+                    renderer.as_mut(),
                     CURSOR_DATA,
                     Fourcc::Abgr8888,
                     (64, 64),
@@ -598,6 +660,8 @@ impl MagmaState<UdevData> {
         crtc: crtc::Handle,
         screencopy: Option<Screencopy>,
     ) -> Result<bool, SwapBuffersError> {
+        #[cfg(feature = "debug")]
+        self.debug.fps.start();
         let device = self.backend_data.devices.get_mut(&node).unwrap();
         let surface = device.surfaces.get_mut(&crtc).unwrap();
         let mut renderer = self
@@ -627,7 +691,26 @@ impl MagmaState<UdevData> {
                 ),
             ]);
         }
-
+        #[cfg(feature = "debug")]
+        if self.debug.active {
+            renderelements.push(
+                self.debug
+                    .global_ui(
+                        Some(&node),
+                        output,
+                        &self.seat,
+                        renderer.as_mut(),
+                        Rectangle::from_loc_and_size(
+                            (0, 0),
+                            output.current_mode().unwrap().size.to_logical(1),
+                        ),
+                        1.0,
+                        0.8,
+                    )
+                    .unwrap()
+                    .into(),
+            );
+        }
         let layer_map = layer_map_for_output(output);
         let (lower, upper): (Vec<&LayerSurface>, Vec<&LayerSurface>) = layer_map
             .layers()
@@ -681,6 +764,8 @@ impl MagmaState<UdevData> {
                     .map(CustomRenderElements::Surface)
                 }),
         );
+        #[cfg(feature = "debug")]
+        self.debug.fps.elements();
 
         let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
             .compositor
@@ -694,6 +779,8 @@ impl MagmaState<UdevData> {
                 ) => err.into(),
                 _ => unreachable!(),
             });
+        #[cfg(feature = "debug")]
+        self.debug.fps.render();
 
         // Copy framebuffer for screencopy.
         if let Some(mut screencopy) = screencopy {
@@ -772,6 +859,8 @@ impl MagmaState<UdevData> {
             } else {
                 screencopy.failed()
             }
+            #[cfg(feature = "debug")]
+            self.debug.fps.screencopy();
         }
 
         let mut result = match frame_result {
