@@ -20,31 +20,37 @@ static POSSIBLE_BACKENDS: &[&str] = &[
     "--winit : Run magma as a X11 or Wayland client using winit.",
     "--tty-udev : Run magma as a tty udev client (requires root if without logind).",
 ];
+
 fn main() {
-    let log_dir = format!(
+    // Setup logging
+    let log_dir = format!( // Get the log directory
         "{}/.local/share/MagmaWM/",
-        std::env::var("HOME").expect("this should always be set")
+        std::env::var("HOME").expect("$HOME not set, exiting.")
     );
-    let file_appender = tracing_appender::rolling::never(
+    let file_appender = tracing_appender::rolling::never( // Create a file appender to log to
         &log_dir,
         format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
     );
     let latest_file_appender = tracing_appender::rolling::never(&log_dir, "latest.log");
     let log_appender = std::io::stdout.and(file_appender).and(latest_file_appender);
+    // Try to get the log level from the environment (RUST_LOG)
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
-        tracing_subscriber::fmt()
+        tracing_subscriber::fmt() // Initialize the logger
             .with_writer(log_appender)
             .with_env_filter(env_filter)
             .init();
-    } else {
+    } else { // If the log level is not set, use the default
         tracing_subscriber::fmt().with_writer(log_appender).init();
     }
+    // Set the panic hook
+    // In simple terms, this is a function that is called when the program panics
     panic::set_hook(Box::new(move |info| {
         let backtrace = Backtrace::new();
 
         let thread = thread::current();
         let thread = thread.name().unwrap_or("<unnamed>");
 
+        // If the panic message is a string, use it, otherwise use Box<Any>
         let msg = match info.payload().downcast_ref::<&'static str>() {
             Some(s) => *s,
             None => match info.payload().downcast_ref::<String>() {
