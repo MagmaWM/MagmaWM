@@ -319,10 +319,10 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
             vec![Uniform::new("size", [size.w as f32, size.h as f32]),
             Uniform::new("radius", CONFIG.borders.radius as f32)]
         );
-        let res = self.inner.draw(frame, src, dst, damage);
+        self.inner.draw(frame, src, dst, damage)?;
         <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
             .clear_tex_program_override();
-        res
+        Ok(())
     }
 
     fn underlying_storage(
@@ -351,9 +351,9 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
             vec![Uniform::new("size", [size.w as f32, size.h as f32]),
             Uniform::new("radius", CONFIG.borders.radius as f32)],
         );
-        let res = self.inner.draw(frame, src, dst, damage);
+        self.inner.draw(frame, src, dst, damage)?;
         <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
-        res
+        Ok(())
     }
 
     fn underlying_storage(
