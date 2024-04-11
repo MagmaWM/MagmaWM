@@ -25,12 +25,16 @@ fn main() {
         "{}/.local/share/MagmaWM/",
         std::env::var("HOME").expect("this should always be set")
     );
-    let file_appender = tracing_appender::rolling::never(
-        &log_dir,
-        format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
-    );
-    let latest_file_appender = tracing_appender::rolling::never(&log_dir, "latest.log");
-    let log_appender = std::io::stdout.and(file_appender).and(latest_file_appender);
+    let log_file_name = format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S"));
+    let log_file_path = format!("{log_dir}/{log_file_name}");
+    let log_link_path = format!("{log_dir}/latest.log");
+    if std::path::Path::new(&log_link_path).exists() {
+        std::fs::remove_file(&log_link_path)
+            .unwrap_or_else(|_| panic!("Unable to remove {log_link_path}"));
+    }
+    std::os::unix::fs::symlink(log_file_path, log_link_path).expect("Unable to symlink log file");
+    let file_appender = tracing_appender::rolling::never(&log_dir, log_file_name);
+    let log_appender = std::io::stdout.and(file_appender);
     if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
         tracing_subscriber::fmt()
             .with_writer(log_appender)
