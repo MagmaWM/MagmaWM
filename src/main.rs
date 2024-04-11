@@ -29,7 +29,8 @@ fn main() {
     let log_file_path = format!("{log_dir}/{log_file_name}");
     let log_link_path = format!("{log_dir}/latest.log");
     if std::path::Path::new(&log_link_path).exists() {
-        std::fs::remove_file(&log_link_path).expect(&format!("Unable to remove {log_link_path}"));
+        std::fs::remove_file(&log_link_path)
+            .unwrap_or_else(|_| panic!("Unable to remove {log_link_path}"));
     }
     std::os::unix::fs::symlink(log_file_path, log_link_path).expect("Unable to symlink log file");
     let file_appender = tracing_appender::rolling::never(&log_dir, log_file_name);
