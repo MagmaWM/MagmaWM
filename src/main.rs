@@ -5,7 +5,7 @@ use std::{panic, thread};
 use crate::backends::{udev, winit};
 use backtrace::Backtrace;
 use chrono::Local;
-use clap::Parser;
+use clap::{Parser, ValueEnum};
 use tracing_subscriber::fmt::writer::MakeWriterExt;
 
 mod backends;
@@ -20,12 +20,18 @@ mod utils;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    #[arg(short, long, default_value = "auto")]
+    backend: Backend,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum Backend {
     /// Run Magma as an X11 or Wayland client using winit
-    #[arg(long)]
-    winit: bool,
-    /// Run magma as a tty udev client (requires root if without logind)
-    #[arg(long)]
-    tty_udev: bool,
+    Winit,
+    /// Run Magma as a tty udev client (requires root if without logind)
+    TtyUdev,
+    /// Automatically select a backend
+    Auto,
 }
 
 fn main() {
@@ -88,14 +94,16 @@ fn main() {
 
     let args = Args::parse();
 
-    if args.winit {
-        info!("Starting magmawn with winit backend");
-        winit::init_winit();
-    } else if args.tty_udev {
-        info!("Starting magma on a tty using udev");
-        udev::init_udev();
-    } else {
-        backends::init_backend_auto();
+    match args.backend {
+        Backend::Winit => {
+            info!("Starting magmawn with winit backend");
+            winit::init_winit();
+        }
+        Backend::TtyUdev => {
+            info!("Starting magma on a tty using udev");
+            udev::init_udev();
+        }
+        Backend::Auto => backends::init_backend_auto(),
     }
 
     info!("Magma is shutting down");
