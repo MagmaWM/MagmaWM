@@ -22,6 +22,9 @@ mod utils;
 struct Args {
     #[arg(short, long, default_value = "auto")]
     backend: Backend,
+    /// Specify log level (fatal, error, warn, info, debug, trace)
+    #[arg(long, name = "LEVEL")]
+    log: Option<String>,
 }
 
 #[derive(Debug, Clone, ValueEnum)]
@@ -49,14 +52,24 @@ fn main() {
     std::os::unix::fs::symlink(log_file_path, log_link_path).expect("Unable to symlink log file");
     let file_appender = tracing_appender::rolling::never(&log_dir, log_file_name);
     let log_appender = std::io::stdout.and(file_appender);
-    if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
-        tracing_subscriber::fmt()
+
+    let args = Args::parse();
+
+    let env_filter = match &args.log {
+        Some(log_level) => tracing_subscriber::EnvFilter::builder()
+            .parse(log_level)
+            .ok(),
+        None => tracing_subscriber::EnvFilter::try_from_default_env().ok(),
+    };
+
+    match env_filter {
+        Some(env_filter) => tracing_subscriber::fmt()
             .with_writer(log_appender)
             .with_env_filter(env_filter)
-            .init();
-    } else {
-        tracing_subscriber::fmt().with_writer(log_appender).init();
+            .init(),
+        None => tracing_subscriber::fmt().with_writer(log_appender).init(),
     }
+
     panic::set_hook(Box::new(move |info| {
         let backtrace = Backtrace::new();
 
@@ -91,8 +104,6 @@ fn main() {
             ),
         }
     }));
-
-    let args = Args::parse();
 
     match args.backend {
         Backend::Winit => {
