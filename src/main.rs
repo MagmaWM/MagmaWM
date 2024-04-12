@@ -20,8 +20,10 @@ mod utils;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
+    /// Run Magma as an X11 or Wayland client using winit
     #[arg(long)]
     winit: bool,
+    /// Run magma as a tty udev client (requires root if without logind)
     #[arg(long)]
     tty_udev: bool,
 }
