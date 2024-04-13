@@ -18,6 +18,7 @@ indexmap = { version = "1.9.3", features = ["serde"] }
 colors-transform = "0.2.11"
 egui = { version = "0.23", optional = true }
 egui_plot = { version = "0.23", optional = true }
+clap = { version = "4.5.4", features = ["derive"] }
 
 [dependencies.smithay]
 git = "https://github.com/Smithay/smithay.git"
