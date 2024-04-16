@@ -4,3 +4,4 @@ pub mod process;
 pub mod render;
 pub mod tiling;
 pub mod workspace;
+pub mod xcursor;
