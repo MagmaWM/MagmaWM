@@ -8,7 +8,7 @@ use smithay::{
         glow::GlowRenderer,
         multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
         utils::CommitCounter,
-        ImportAll, ImportMem, Renderer,
+        ImportAll, ImportMem, Renderer, Texture,
     },
     utils::{Buffer, Physical, Rectangle, Scale},
 };
@@ -18,6 +18,8 @@ pub type GlMultiRenderer<'a, 'b> =
     MultiRenderer<'a, 'a, 'b, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
 pub type GlMultiFrame<'a, 'b, 'frame> =
     MultiFrame<'a, 'a, 'b, 'frame, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
+
+#[derive(Debug)]
 pub enum CustomRenderElements<R>
 where
     R: Renderer,
@@ -25,6 +27,7 @@ where
     Texture(TextureRenderElement<GlesTexture>),
     Surface(WaylandSurfaceRenderElement<R>),
     Shader(PixelShaderElement),
+    Window(WindowRenderElement<R>),
 }
 
 impl<R> Element for CustomRenderElements<R>
@@ -38,6 +41,7 @@ where
             CustomRenderElements::Texture(elem) => elem.id(),
             CustomRenderElements::Surface(elem) => elem.id(),
             CustomRenderElements::Shader(elem) => elem.id(),
+            CustomRenderElements::Window(elem) => elem.id(),
         }
     }
 
@@ -46,6 +50,7 @@ where
             CustomRenderElements::Texture(elem) => elem.current_commit(),
             CustomRenderElements::Surface(elem) => elem.current_commit(),
             CustomRenderElements::Shader(elem) => elem.current_commit(),
+            CustomRenderElements::Window(elem) => elem.current_commit(),
         }
     }
 
@@ -54,6 +59,7 @@ where
             CustomRenderElements::Texture(elem) => elem.src(),
             CustomRenderElements::Surface(elem) => elem.src(),
             CustomRenderElements::Shader(elem) => elem.src(),
+            CustomRenderElements::Window(elem) => elem.src(),
         }
     }
 
@@ -62,6 +68,7 @@ where
             CustomRenderElements::Texture(elem) => elem.geometry(scale),
             CustomRenderElements::Surface(elem) => elem.geometry(scale),
             CustomRenderElements::Shader(elem) => elem.geometry(scale),
+            CustomRenderElements::Window(elem) => elem.geometry(scale),
         }
     }
 
@@ -70,6 +77,7 @@ where
             CustomRenderElements::Texture(elem) => elem.location(scale),
             CustomRenderElements::Surface(elem) => elem.location(scale),
             CustomRenderElements::Shader(elem) => elem.location(scale),
+            CustomRenderElements::Window(elem) => elem.location(scale),
         }
     }
 
@@ -78,6 +86,7 @@ where
             CustomRenderElements::Texture(elem) => elem.transform(),
             CustomRenderElements::Surface(elem) => elem.transform(),
             CustomRenderElements::Shader(elem) => elem.transform(),
+            CustomRenderElements::Window(elem) => elem.transform(),
         }
     }
 
@@ -90,6 +99,7 @@ where
             CustomRenderElements::Texture(elem) => elem.damage_since(scale, commit),
             CustomRenderElements::Surface(elem) => elem.damage_since(scale, commit),
             CustomRenderElements::Shader(elem) => elem.damage_since(scale, commit),
+            CustomRenderElements::Window(elem) => elem.damage_since(scale, commit),
         }
     }
 
@@ -98,6 +108,7 @@ where
             CustomRenderElements::Texture(elem) => elem.opaque_regions(scale),
             CustomRenderElements::Surface(elem) => elem.opaque_regions(scale),
             CustomRenderElements::Shader(elem) => elem.opaque_regions(scale),
+            CustomRenderElements::Window(elem) => elem.opaque_regions(scale),
         }
     }
 }
@@ -122,6 +133,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
                 RenderElement::<GlowRenderer>::draw(elem, frame.as_mut(), src, dst, damage)
                     .map_err(MultiError::Render)
             }
+            CustomRenderElements::Window(elem) => elem.draw(frame, src, dst, damage),
         }
     }
 
@@ -133,6 +145,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
             CustomRenderElements::Texture(elem) => elem.underlying_storage(renderer.as_mut()),
             CustomRenderElements::Surface(elem) => elem.underlying_storage(renderer),
             CustomRenderElements::Shader(elem) => elem.underlying_storage(renderer.as_mut()),
+            CustomRenderElements::Window(elem) => elem.underlying_storage(renderer),
         }
     }
 }
@@ -153,6 +166,7 @@ impl RenderElement<GlowRenderer> for CustomRenderElements<GlowRenderer> {
             CustomRenderElements::Shader(elem) => {
                 RenderElement::<GlowRenderer>::draw(elem, frame, src, dst, damage)
             }
+            CustomRenderElements::Window(elem) => elem.draw(frame, src, dst, damage),
         }
     }
 }
@@ -183,6 +197,15 @@ where
     }
 }
 
+impl<R> From<WindowRenderElement<R>> for CustomRenderElements<R>
+where
+    R: Renderer,
+{
+    fn from(value: WindowRenderElement<R>) -> Self {
+        CustomRenderElements::Window(value)
+    }
+}
+
 pub trait AsGlowRenderer
 where
     Self: Renderer,
@@ -208,5 +231,146 @@ impl<'a, 'b> AsGlowRenderer for GlMultiRenderer<'a, 'b> {
 
     fn glow_renderer_mut(&mut self) -> &mut GlowRenderer {
         self.as_mut()
+    }
+}
+
+#[derive(Debug)]
+pub struct WindowRenderElement<R>
+where
+    R: Renderer,
+{
+    inner: WaylandSurfaceRenderElement<R>,
+}
+
+impl<R> Element for WindowRenderElement<R>
+where
+    R: Renderer,
+    <R as Renderer>::TextureId: 'static,
+    R: ImportAll + ImportMem,
+{
+    fn id(&self) -> &Id {
+        self.inner.id()
+    }
+
+    fn current_commit(&self) -> CommitCounter {
+        self.inner.current_commit()
+    }
+
+    fn src(&self) -> Rectangle<f64, Buffer> {
+        self.inner.src()
+    }
+
+    fn geometry(&self, scale: Scale<f64>) -> Rectangle<i32, Physical> {
+        self.inner.geometry(scale)
+    }
+
+    fn location(&self, scale: Scale<f64>) -> smithay::utils::Point<i32, Physical> {
+        self.inner.location(scale)
+    }
+
+    fn transform(&self) -> smithay::utils::Transform {
+        self.inner.transform()
+    }
+
+    fn damage_since(
+        &self,
+        scale: Scale<f64>,
+        commit: Option<CommitCounter>,
+    ) -> Vec<Rectangle<i32, Physical>> {
+        self.inner.damage_since(scale, commit)
+    }
+
+    fn opaque_regions(&self, scale: Scale<f64>) -> Vec<Rectangle<i32, Physical>> {
+        // self.inner.opaque_regions(scale)
+        vec![]
+    }
+
+    fn alpha(&self) -> f32 {
+        self.inner.alpha()
+    }
+
+    fn kind(&self) -> smithay::backend::renderer::element::Kind {
+        self.inner.kind()
+    }
+}
+
+impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
+    for WindowRenderElement<GlMultiRenderer<'a, 'b>>
+{
+    fn draw(
+        &self,
+        frame: &mut <GlMultiRenderer<'a, 'b> as Renderer>::Frame<'_>,
+        src: Rectangle<f64, Buffer>,
+        dst: Rectangle<i32, Physical>,
+        damage: &[Rectangle<i32, Physical>],
+    ) -> Result<(), <GlMultiRenderer<'a, 'b> as Renderer>::Error> {
+        let size = self
+            .geometry(Scale::from(1.0))
+            .size
+            .to_logical(Scale::from(1));
+        let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut());
+        framegl.override_default_tex_program(
+            CornerShader::get(framegl.egl_context()),
+            vec![Uniform::new("size", [size.w as f32, size.h as f32])],
+        );
+        let res = self.inner.draw(frame, src, dst, damage);
+        <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
+            .clear_tex_program_override();
+        res
+    }
+
+    fn underlying_storage(
+        &self,
+        renderer: &mut GlMultiRenderer<'a, 'b>,
+    ) -> Option<smithay::backend::renderer::element::UnderlyingStorage> {
+        self.inner.underlying_storage(renderer)
+    }
+}
+
+impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
+    fn draw(
+        &self,
+        frame: &mut <GlowRenderer as Renderer>::Frame<'_>,
+        src: Rectangle<f64, Buffer>,
+        dst: Rectangle<i32, Physical>,
+        damage: &[Rectangle<i32, Physical>],
+    ) -> Result<(), <GlowRenderer as Renderer>::Error> {
+        self.inner.draw(frame, src, dst, damage)
+    }
+
+    fn underlying_storage(
+        &self,
+        renderer: &mut GlowRenderer,
+    ) -> Option<smithay::backend::renderer::element::UnderlyingStorage> {
+        self.inner.underlying_storage(renderer)
+    }
+}
+
+impl<R> From<WaylandSurfaceRenderElement<R>> for WindowRenderElement<R>
+where
+    R: Renderer,
+{
+    fn from(value: WaylandSurfaceRenderElement<R>) -> Self {
+        WindowRenderElement { inner: value }
+    }
+}
+
+pub fn wrap_window_surface<
+    R: Renderer + ImportAll + AsGlowRenderer,
+    C: From<WaylandSurfaceRenderElement<R>> + From<WindowRenderElement<R>>,
+>(
+    mut elements: Vec<WaylandSurfaceRenderElement<R>>,
+) -> Vec<C>
+where
+    <R as Renderer>::TextureId: Texture + 'static,
+{
+    if let Some(elem) = elements.pop() {
+        let win = WindowRenderElement::from(elem);
+        let mut elements: Vec<C> = elements.into_iter().map(C::from).collect();
+        elements.push(C::from(win));
+        elements
+    }
+    else {
+        elements.into_iter().map(C::from).collect()
     }
 }

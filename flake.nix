@@ -12,7 +12,7 @@
         "i686-linux"
         "x86_64-linux"
       ];
-
+      rust-toolchain = "stable";
       pkgsForSystem = system: (import nixpkgs {
         inherit system;
         overlays = [
@@ -25,7 +25,6 @@
       overlays.default = final: _prev:
         let
           version = (builtins.fromTOML (builtins.readFile ./Cargo.toml)).package.version;
-          rust-toolchain = "stable";
         in
         {
           magmawm = final.callPackage ./magmawm.nix {
@@ -48,10 +47,13 @@
           default = pkgs.mkShell {
             name = "magmawm";
             NIX_CONFIG = "experimental-features = nix-command flakes";
+            # Force linking to libEGL and libwayland-client
+            RUSTFLAGS = "-lEGL -lwayland-client";
+            LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib";
             inputsFrom = [ self.packages.${system}.magmawm ];
-            shellHook = ''
-              export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib"
-            '';
+            nativeBuildInputs = [
+              pkgs.rust-bin."${rust-toolchain}".latest.default
+            ];
           };
         });
     };
