@@ -23,10 +23,12 @@ pkgs.rustPlatform.buildRustPackage {
       pkg-config
       systemdLibs # Contains libudev. DON'T PANIC: it won't install the whole init system
       wayland
-      wayland-scanner
-      xorg.libX11 # Needed for xwayland to work
-      xorg.libXcursor
-      xorg.libXi;
+      wayland-scanner;
+
+    inherit (pkgs.xorg)
+      libX11 # Needed for xwayland to work
+      libXcursor
+      libXi;
   };
 
   nativeBuildInputs = builtins.attrValues {
