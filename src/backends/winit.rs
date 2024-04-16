@@ -81,6 +81,9 @@ pub fn init_winit() {
 
     let display: Display<MagmaState<WinitData>> = Display::new().unwrap();
 
+    // nixos gets confused if WAYLAND_DISPLAY is already set
+    std::env::remove_var("WAYLAND_DISPLAY");
+
     let (mut backend, mut winit) = winit::init::<GlowRenderer>().unwrap();
 
     let mode = Mode {
