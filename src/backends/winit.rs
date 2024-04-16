@@ -32,6 +32,8 @@ use smithay::{
 };
 use tracing::{info, warn};
 
+use crate::utils::process;
+
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
@@ -193,13 +195,7 @@ pub fn init_winit() {
         .unwrap();
 
     for command in &CONFIG.autostart {
-        if let Err(err) = std::process::Command::new("/bin/sh")
-            .arg("-c")
-            .arg(command)
-            .spawn()
-        {
-            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-        }
+        process::spawn(command);
     }
 
     event_loop
