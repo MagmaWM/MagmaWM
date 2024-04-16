@@ -67,7 +67,10 @@ use crate::{
     delegate_screencopy_manager,
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{border::BorderShader, CustomRenderElements},
+    utils::{
+        process,
+        render::{border::BorderShader, CustomRenderElements},
+    },
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
@@ -313,13 +316,7 @@ pub fn init_udev() {
     std::env::set_var("WAYLAND_DISPLAY", &calloopdata.state.socket_name);
 
     for command in &CONFIG.autostart {
-        if let Err(err) = std::process::Command::new("/bin/sh")
-            .arg("-c")
-            .arg(command)
-            .spawn()
-        {
-            info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-        }
+        process::spawn(command);
     }
 
     event_loop
