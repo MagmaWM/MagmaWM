@@ -12,26 +12,28 @@ pkgs.rustPlatform.buildRustPackage {
 
   rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
 
-  buildInputs = with pkgs; [
-    libdrm
-    libglvnd
-    libinput
-    libseat
-    libxkbcommon
-    mesa
-    pkg-config
-    systemdLibs # Contains libudev. DON'T PANIC: it won't install the whole init system
-    wayland
-    wayland-scanner
-    xorg.libX11 # Needed for xwayland to work
-    xorg.libXcursor
-    xorg.libXi
-  ];
+  buildInputs = builtins.attrValues {
+    inherit (pkgs)
+      libdrm
+      libglvnd
+      libinput
+      libseat
+      libxkbcommon
+      mesa
+      pkg-config
+      systemdLibs # Contains libudev. DON'T PANIC: it won't install the whole init system
+      wayland
+      wayland-scanner
+      xorg.libX11 # Needed for xwayland to work
+      xorg.libXcursor
+      xorg.libXi;
+  };
 
-  nativeBuildInputs = with pkgs; [
-    makeWrapper
-    pkg-config
-  ];
+  nativeBuildInputs = builtins.attrValues {
+    inherit (pkgs)
+      makeWrapper
+      pkg-config;
+  };
 
   cargoLock = {
     lockFile = ./Cargo.lock;
