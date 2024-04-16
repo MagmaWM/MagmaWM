@@ -1,12 +1,17 @@
-use tracing::{error, info};
+use std::{fs::File, panic, thread};
 
-use std::{panic, thread};
-
-use crate::backends::{udev, winit};
 use backtrace::Backtrace;
 use chrono::Local;
 use clap::{Parser, ValueEnum};
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing::{error, info};
+use tracing_subscriber::{
+    filter::{Directive, EnvFilter, LevelFilter},
+    layer::SubscriberExt,
+    util::SubscriberInitExt,
+    Layer,
+};
+
+use crate::backends::{udev, winit};
 
 mod backends;
 mod config;
@@ -38,6 +43,7 @@ enum Backend {
 }
 
 fn main() {
+    // TODO: maybe make these Paths to begin with?
     let log_dir = format!(
         "{}/.local/share/MagmaWM/",
         std::env::var("HOME").expect("this should always be set")
@@ -45,30 +51,44 @@ fn main() {
     let log_file_name = format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S"));
     let log_file_path = format!("{log_dir}/{log_file_name}");
     let log_link_path = format!("{log_dir}/latest.log");
+
+    // create a new log file and symlink latest.log to it
+    let log_file = File::create(&log_file_path).expect("Unable to create log file");
+    // delete latest.log if it already exists
     if std::path::Path::new(&log_link_path).exists() {
         std::fs::remove_file(&log_link_path)
             .unwrap_or_else(|_| panic!("Unable to remove {log_link_path}"));
     }
-    std::os::unix::fs::symlink(log_file_path, log_link_path).expect("Unable to symlink log file");
-    let file_appender = tracing_appender::rolling::never(&log_dir, log_file_name);
-    let log_appender = std::io::stdout.and(file_appender);
+    std::os::unix::fs::symlink(&log_file_path, log_link_path).expect("Unable to symlink log file");
+
+    fn make_filter<S: AsRef<str>>(log_level: Option<S>, default: &Directive) -> EnvFilter {
+        // filter using the --log flag if passed, otherwise use RUST_LOG, ignoring invalid strings
+        match log_level {
+            Some(log_level) => EnvFilter::builder()
+                .with_default_directive(default.clone())
+                .parse_lossy(log_level),
+            None => EnvFilter::builder()
+                .with_default_directive(default.clone())
+                .from_env_lossy(),
+        }
+    }
 
     let args = Args::parse();
 
-    let env_filter = match &args.log {
-        Some(log_level) => tracing_subscriber::EnvFilter::builder()
-            .parse(log_level)
-            .ok(),
-        None => tracing_subscriber::EnvFilter::try_from_default_env().ok(),
-    };
+    let default = LevelFilter::INFO.into();
 
-    match env_filter {
-        Some(env_filter) => tracing_subscriber::fmt()
-            .with_writer(log_appender)
-            .with_env_filter(env_filter)
-            .init(),
-        None => tracing_subscriber::fmt().with_writer(log_appender).init(),
-    }
+    let file_layer = tracing_subscriber::fmt::layer()
+        .with_ansi(false)
+        .with_writer(log_file)
+        .with_filter(make_filter(args.log.as_ref(), &default));
+    let stderr_layer = tracing_subscriber::fmt::layer()
+        .with_writer(std::io::stderr)
+        .with_filter(make_filter(args.log.as_ref(), &default));
+
+    tracing_subscriber::registry()
+        .with(file_layer)
+        .with(stderr_layer)
+        .init();
 
     panic::set_hook(Box::new(move |info| {
         let backtrace = Backtrace::new();
@@ -87,7 +107,8 @@ fn main() {
         match info.location() {
             Some(location) => {
                 error!(
-                    target: "panic", "thread '{}' panicked at '{}': {}:{}{:?}",
+                    target: "panic",
+                    "thread '{}' panicked at '{}': {}:{}{:?}",
                     thread,
                     msg,
                     location.file(),
