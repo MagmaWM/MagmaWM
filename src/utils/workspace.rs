@@ -14,7 +14,7 @@ use smithay::{
     utils::{Logical, Point, Rectangle, Scale, Transform},
 };
 
-use crate::state::CONFIG;
+use crate::{error::Result, state::CONFIG};
 
 use super::{
     binarytree::BinaryTree,
@@ -94,7 +94,7 @@ impl Workspace {
     >(
         &self,
         renderer: &mut R,
-    ) -> Vec<C>
+    ) -> Result<Vec<C>>
     where
         <R as Renderer>::TextureId: Texture + 'static,
     {
@@ -102,15 +102,11 @@ impl Workspace {
         for element in &self.windows {
             let window = &element.borrow().window;
             if CONFIG.borders.thickness > 0 {
-                render_elements.push(C::from(
-                    BorderShader::element(
-                        renderer.glow_renderer_mut(),
-                        window,
-                        element.borrow().rec.loc,
-                    )
-                    // TODO: Propagate this error
-                    .unwrap(),
-                ));
+                render_elements.push(C::from(BorderShader::element(
+                    renderer.glow_renderer_mut(),
+                    window,
+                    element.borrow().rec.loc,
+                )?));
             }
             render_elements.append(&mut window.render_elements(
                 renderer,
@@ -119,7 +115,7 @@ impl Workspace {
                 1.0,
             ));
         }
-        render_elements
+        Ok(render_elements)
     }
 
     pub fn outputs(&self) -> impl Iterator<Item = &Output> {

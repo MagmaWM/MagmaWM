@@ -294,7 +294,12 @@ pub fn winit_dispatch(
             }),
     );
 
-    renderelements.extend(workspace.render_elements(winitdata.backend.renderer()));
+    renderelements.extend(
+        workspace
+            .render_elements(winitdata.backend.renderer())
+            // TODO: Propagate this error
+            .unwrap(),
+    );
 
     renderelements.extend(
         lower

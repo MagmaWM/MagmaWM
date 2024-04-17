@@ -65,6 +65,7 @@ use tracing::{error, info, trace, warn};
 
 use crate::{
     delegate_screencopy_manager,
+    error::{Error, Result},
     protocols::screencopy::{frame::Screencopy, ScreencopyHandler, ScreencopyManagerState},
     state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::{
@@ -239,7 +240,8 @@ pub fn init_udev() {
                             // otherwise
                             surface.compositor.reset_buffers();
                             data.state.loop_handle.insert_idle(move |data| {
-                                if let Some(SwapBuffersError::ContextLost(_)) =
+                                // Use the SwapBuffersError variant of Error
+                                if let Some(Error::SwapBuffersError(_)) =
                                     data.state.render(node, crtc, None).err()
                                 {
                                     info!("Context lost on device {}, re-creating", node);
@@ -657,7 +659,7 @@ impl MagmaState<UdevData> {
         node: DrmNode,
         crtc: crtc::Handle,
         screencopy: Option<Screencopy>,
-    ) -> Result<bool, SwapBuffersError> {
+    ) -> Result<bool> {
         #[cfg(feature = "debug")]
         self.debug.fps.start();
         let device = self.backend_data.devices.get_mut(&node).unwrap();
@@ -738,7 +740,7 @@ impl MagmaState<UdevData> {
                 }),
         );
 
-        renderelements.extend(self.workspaces.current().render_elements(&mut renderer));
+        renderelements.extend(self.workspaces.current().render_elements(&mut renderer)?);
 
         renderelements.extend(
             lower
@@ -765,18 +767,24 @@ impl MagmaState<UdevData> {
         #[cfg(feature = "debug")]
         self.debug.fps.elements();
 
-        let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
-            .compositor
-            .render_frame::<_, _, GlesTexture>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
-            .map_err(|err| match err {
-                smithay::backend::drm::compositor::RenderFrameError::PrepareFrame(err) => {
-                    err.into()
-                }
-                smithay::backend::drm::compositor::RenderFrameError::RenderFrame(
-                    smithay::backend::renderer::damage::Error::Rendering(err),
-                ) => err.into(),
-                _ => unreachable!(),
-            });
+        // Use the fully qualified name std::result::Result, since our Result conflicts
+        let frame_result: std::result::Result<RenderFrameResult<_, _, _>, SwapBuffersError> =
+            surface
+                .compositor
+                .render_frame::<_, _, GlesTexture>(
+                    &mut renderer,
+                    &renderelements,
+                    [0.1, 0.1, 0.1, 1.0],
+                )
+                .map_err(|err| match err {
+                    smithay::backend::drm::compositor::RenderFrameError::PrepareFrame(err) => {
+                        err.into()
+                    }
+                    smithay::backend::drm::compositor::RenderFrameError::RenderFrame(
+                        smithay::backend::renderer::damage::Error::Rendering(err),
+                    ) => err.into(),
+                    _ => unreachable!(),
+                });
         #[cfg(feature = "debug")]
         self.debug.fps.render();
 
@@ -910,7 +918,8 @@ impl MagmaState<UdevData> {
         if reschedule {
             let output_refresh = match output.current_mode() {
                 Some(mode) => mode.refresh,
-                None => return result,
+                // Use the `?` operator to coerce the error type to Error, then wrap it in a new Ok
+                None => return Ok(result?),
             };
             // If reschedule is true we either hit a temporary failure or more likely rendering
             // did not cause any damage on the output. In this case we just re-schedule a repaint
@@ -941,7 +950,8 @@ impl MagmaState<UdevData> {
         });
         // TODO: Propagate this error
         BorderShader::cleanup(renderer.as_mut()).unwrap();
-        result
+        // Use the same trick as before to coerce the error type
+        Ok(result?)
     }
 }
 
