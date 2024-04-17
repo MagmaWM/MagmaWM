@@ -61,13 +61,8 @@ impl BorderShader {
             .insert_if_missing(|| BorderShaderElements(RefCell::new(HashMap::new())));
         Ok(())
     }
-    pub fn get(renderer: &GlowRenderer) -> Result<&BorderShader> {
-        let shader = renderer
-            .egl_context()
-            .user_data()
-            .get::<BorderShader>()
-            .ok_or(Error::BorderShaderNotInitialized)?;
-        Ok(shader)
+    pub fn get(renderer: &GlowRenderer) -> Option<&BorderShader> {
+        renderer.egl_context().user_data().get::<BorderShader>()
     }
     pub fn element(
         renderer: &mut GlowRenderer,
@@ -98,7 +93,10 @@ impl BorderShader {
             let gradient_direction = [angle.cos(), angle.sin()];
             let elem = if CONFIG.borders.radius > 0.0 {
                 PixelShaderElement::new(
-                    Self::get(renderer)?.rounded.clone(),
+                    Self::get(renderer)
+                        .ok_or(Error::BorderShaderNotInitialized)?
+                        .rounded
+                        .clone(),
                     geo,
                     None,
                     1.0,
@@ -120,7 +118,10 @@ impl BorderShader {
                 )
             } else {
                 PixelShaderElement::new(
-                    Self::get(renderer)?.default.clone(),
+                    Self::get(renderer)
+                        .ok_or(Error::BorderShaderNotInitialized)?
+                        .default
+                        .clone(),
                     geo,
                     None,
                     1.0,
