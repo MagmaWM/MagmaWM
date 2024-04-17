@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 tracing = "0.1.37"
 tracing-subscriber = { version = "0.3.16", features = ["env-filter"] }
-tracing-appender = "0.2"
 chrono = "0.4.24"
 backtrace = "0.3.67"
 smithay-drm-extras = { git = "https://github.com/Smithay/smithay.git"}

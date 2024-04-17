@@ -1,12 +1,13 @@
-use tracing::{error, info};
-
 use std::{panic, thread};
 
-use crate::backends::{udev, winit};
 use backtrace::Backtrace;
-use chrono::Local;
 use clap::{Parser, ValueEnum};
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use tracing::{error, info};
+
+use crate::{
+    backends::{udev, winit},
+    utils::log::init_logs,
+};
 
 mod backends;
 mod config;
@@ -38,37 +39,9 @@ enum Backend {
 }
 
 fn main() {
-    let log_dir = format!(
-        "{}/.local/share/MagmaWM/",
-        std::env::var("HOME").expect("this should always be set")
-    );
-    let log_file_name = format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S"));
-    let log_file_path = format!("{log_dir}/{log_file_name}");
-    let log_link_path = format!("{log_dir}/latest.log");
-    if std::path::Path::new(&log_link_path).exists() {
-        std::fs::remove_file(&log_link_path)
-            .unwrap_or_else(|_| panic!("Unable to remove {log_link_path}"));
-    }
-    std::os::unix::fs::symlink(log_file_path, log_link_path).expect("Unable to symlink log file");
-    let file_appender = tracing_appender::rolling::never(&log_dir, log_file_name);
-    let log_appender = std::io::stdout.and(file_appender);
-
     let args = Args::parse();
 
-    let env_filter = match &args.log {
-        Some(log_level) => tracing_subscriber::EnvFilter::builder()
-            .parse(log_level)
-            .ok(),
-        None => tracing_subscriber::EnvFilter::try_from_default_env().ok(),
-    };
-
-    match env_filter {
-        Some(env_filter) => tracing_subscriber::fmt()
-            .with_writer(log_appender)
-            .with_env_filter(env_filter)
-            .init(),
-        None => tracing_subscriber::fmt().with_writer(log_appender).init(),
-    }
+    init_logs(args.log);
 
     panic::set_hook(Box::new(move |info| {
         let backtrace = Backtrace::new();
@@ -87,7 +60,8 @@ fn main() {
         match info.location() {
             Some(location) => {
                 error!(
-                    target: "panic", "thread '{}' panicked at '{}': {}:{}{:?}",
+                    target: "panic",
+                    "thread '{}' panicked at '{}': {}:{}{:?}",
                     thread,
                     msg,
                     location.file(),
