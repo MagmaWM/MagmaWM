@@ -174,7 +174,8 @@ pub fn init_winit() {
     };
 
     let state = &mut data.state;
-    BorderShader::init(state.backend_data.backend.renderer());
+    // TODO: Propagate this error
+    BorderShader::init(state.backend_data.backend.renderer()).unwrap();
     // map output to every workspace
     for workspace in state.workspaces.iter() {
         workspace.add_output(output.clone());
@@ -342,5 +343,6 @@ pub fn winit_dispatch(
     workspace.windows().for_each(|e| e.refresh());
     data.display_handle.flush_clients().unwrap();
     state.popup_manager.cleanup();
-    BorderShader::cleanup(winitdata.backend.renderer());
+    // TODO: Propagate this error
+    BorderShader::cleanup(winitdata.backend.renderer()).unwrap();
 }

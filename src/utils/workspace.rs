@@ -102,11 +102,15 @@ impl Workspace {
         for element in &self.windows {
             let window = &element.borrow().window;
             if CONFIG.borders.thickness > 0 {
-                render_elements.push(C::from(BorderShader::element(
-                    renderer.glow_renderer_mut(),
-                    window,
-                    element.borrow().rec.loc,
-                )));
+                render_elements.push(C::from(
+                    BorderShader::element(
+                        renderer.glow_renderer_mut(),
+                        window,
+                        element.borrow().rec.loc,
+                    )
+                    // TODO: Propagate this error
+                    .unwrap(),
+                ));
             }
             render_elements.append(&mut window.render_elements(
                 renderer,

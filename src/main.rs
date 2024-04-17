@@ -12,6 +12,7 @@ mod backends;
 mod config;
 #[cfg(feature = "debug")]
 mod debug;
+mod error;
 mod handlers;
 mod protocols;
 mod state;

@@ -622,7 +622,8 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-                BorderShader::init(renderer.as_mut());
+                // TODO: Propagate this error
+                BorderShader::init(renderer.as_mut()).unwrap();
                 let surface = Surface {
                     _device_id: node,
                     _render_node: device.render_node,
@@ -938,7 +939,8 @@ impl MagmaState<UdevData> {
                 |_, _| Some(output.clone()),
             );
         });
-        BorderShader::cleanup(renderer.as_mut());
+        // TODO: Propagate this error
+        BorderShader::cleanup(renderer.as_mut()).unwrap();
         result
     }
 }
