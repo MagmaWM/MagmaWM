@@ -10,8 +10,6 @@ pkgs.rustPlatform.buildRustPackage {
   pname = "magmawm";
   src = lib.cleanSource ./.;
 
-  rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
-
   buildInputs = with pkgs; [
     libdrm
     libglvnd
