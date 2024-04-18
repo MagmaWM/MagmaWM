@@ -10,7 +10,14 @@ pkgs.rustPlatform.buildRustPackage {
   pname = "magmawm";
   src = lib.cleanSource ./.;
 
-  rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
+  rust = pkgs.rust-bin."${rust-toolchain}".latest.default.override {
+    extensions = [
+      "cargo"
+      "clippy"
+      "rust-src"
+      "rustc"
+    ];
+  };
 
   buildInputs = with pkgs; [
     libdrm
