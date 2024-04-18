@@ -50,14 +50,7 @@
             NIX_CONFIG = "experimental-features = nix-command flakes";
             inputsFrom = [ self.packages.${system}.magmawm ];
             nativeBuildInputs = [
-              (pkgs.rust-bin."${rust-toolchain}".latest.default.override {
-                extensions = [
-                  "cargo"
-                  "clippy"
-                  "rust-src"
-                  "rustc"
-                ];
-              })
+              pkgs.rust-bin."${rust-toolchain}".latest.default
             ];
             shellHook = ''
               export LD_LIBRARY_PATH="$LD_LIBRARY_PATH:${pkgs.libglvnd}/lib"
