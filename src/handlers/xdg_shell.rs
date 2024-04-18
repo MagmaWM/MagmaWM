@@ -102,7 +102,7 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
         WindowElement::X11(x) => x.wl_surface() == Some(surface.clone()),
     }) {
         let initial_configure_sent = match window.deref() {
-            WindowElement::Wayland(w) => with_states(surface, |states| {
+            WindowElement::Wayland(_w) => with_states(surface, |states| {
                 states
                     .data_map
                     .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
@@ -111,7 +111,7 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
                     .unwrap()
                     .initial_configure_sent
             }),
-            WindowElement::X11(x) => false,
+            WindowElement::X11(_x) => false,
         };
         if !initial_configure_sent {
             match window.deref() {

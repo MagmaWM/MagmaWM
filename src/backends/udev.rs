@@ -36,7 +36,7 @@ use smithay::{
     reexports::{
         calloop::{
             timer::{TimeoutAction, Timer},
-            EventLoop, LoopHandle, RegistrationToken,
+            EventLoop, RegistrationToken,
         },
         drm::{
             control::{crtc, ModeTypeFlags},
@@ -967,7 +967,7 @@ impl MagmaState<UdevData> {
                     Some(Duration::ZERO),
                     |_, _| Some(output.clone()),
                 ),
-                WindowElement::X11(x) => { /* TODO */ }
+                WindowElement::X11(_x) => { /* TODO */ }
             });
         BorderShader::cleanup(renderer.as_mut());
         result

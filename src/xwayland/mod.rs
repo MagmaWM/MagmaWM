@@ -1,20 +1,18 @@
 use std::{
     cell::RefCell,
     collections::HashMap,
-    ops::Deref,
     os::{fd::RawFd, unix::net::UnixStream},
     rc::Rc,
 };
 
 use smithay::{
-    desktop::{space::SpaceElement, Window},
+    desktop::space::SpaceElement,
     reexports::{
         calloop::LoopHandle,
         wayland_server::{Client, DisplayHandle},
         x11rb,
     },
     utils::{Logical, Rectangle},
-    wayland::shell::xdg::{ToplevelSurface, XdgShellHandler},
     xwayland::{
         xwm::{Reorder, ResizeEdge, XwmId},
         X11Surface, X11Wm, XWayland, XWaylandEvent, XWaylandSource, XwmHandler,
@@ -24,10 +22,7 @@ use tracing::{debug, error, info};
 
 use crate::{
     state::{Backend, CalloopData, MagmaState},
-    utils::{
-        focus::FocusTarget,
-        workspace::{self, MagmaWindow, WindowElement},
-    },
+    utils::workspace::{MagmaWindow, WindowElement},
 };
 
 #[derive(Debug)]
@@ -239,17 +234,17 @@ impl<BackendData: Backend> XwmHandler for CalloopData<BackendData> {
 }
 
 impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
-    fn xwm_state(&mut self, xwm: XwmId) -> &mut X11Wm {
+    fn xwm_state(&mut self, _xwm: XwmId) -> &mut X11Wm {
         self.xwm.as_mut().unwrap()
     }
 
-    fn new_window(&mut self, xwm: XwmId, window: X11Surface) {
+    fn new_window(&mut self, _xwm: XwmId, _window: X11Surface) {
         debug!("New x11 window");
     }
 
-    fn new_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {}
+    fn new_override_redirect_window(&mut self, _xwm: XwmId, _window: X11Surface) {}
 
-    fn map_window_request(&mut self, xwm: XwmId, window: X11Surface) {
+    fn map_window_request(&mut self, _xwm: XwmId, window: X11Surface) {
         window.set_mapped(true).unwrap();
         let rec = window.geometry();
         let window = WindowElement::X11(window);
@@ -270,7 +265,7 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         debug!("Mapped new x11 window");
     }
 
-    fn mapped_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {
+    fn mapped_override_redirect_window(&mut self, _xwm: XwmId, window: X11Surface) {
         let rec = window.geometry();
         let window = WindowElement::X11(window);
         self.workspaces
@@ -279,7 +274,7 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         debug!("Override mapped new x11 window");
     }
 
-    fn unmapped_window(&mut self, xwm: XwmId, window: X11Surface) {
+    fn unmapped_window(&mut self, _xwm: XwmId, window: X11Surface) {
         let workspaces = self.workspaces.iter().collect::<Vec<_>>();
         let elem = WindowElement::X11(window.clone());
         for workspace in workspaces {
@@ -291,19 +286,19 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         debug!("Unmapped x11 window");
     }
 
-    fn destroyed_window(&mut self, xwm: XwmId, window: X11Surface) {
+    fn destroyed_window(&mut self, _xwm: XwmId, _window: X11Surface) {
         debug!("Destroyed x11 window");
     }
 
     fn configure_request(
         &mut self,
-        xwm: XwmId,
+        _xwm: XwmId,
         window: X11Surface,
-        x: Option<i32>,
-        y: Option<i32>,
+        _x: Option<i32>,
+        _y: Option<i32>,
         w: Option<u32>,
         h: Option<u32>,
-        reorder: Option<Reorder>,
+        _reorder: Option<Reorder>,
     ) {
         let mut geo = window.geometry();
         if let Some(w) = w {
@@ -317,25 +312,25 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
 
     fn configure_notify(
         &mut self,
-        xwm: XwmId,
-        window: X11Surface,
-        geometry: Rectangle<i32, Logical>,
-        above: Option<x11rb::protocol::xproto::Window>,
+        _xwm: XwmId,
+        _window: X11Surface,
+        _geometry: Rectangle<i32, Logical>,
+        _above: Option<x11rb::protocol::xproto::Window>,
     ) {
         info!("TODO: x11 configure_notify");
     }
 
     fn resize_request(
         &mut self,
-        xwm: XwmId,
-        window: X11Surface,
-        button: u32,
-        resize_edge: ResizeEdge,
+        _xwm: XwmId,
+        _window: X11Surface,
+        _button: u32,
+        _resize_edge: ResizeEdge,
     ) {
         info!("TODO: x11 resize_request");
     }
 
-    fn move_request(&mut self, xwm: XwmId, window: X11Surface, button: u32) {
+    fn move_request(&mut self, _xwm: XwmId, _window: X11Surface, _button: u32) {
         info!("TODO: x11 move_request");
     }
 }

@@ -141,8 +141,8 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                     WindowElement::X11(ftw_x) => {
                         for window in self.workspaces.all_windows() {
                             if let WindowElement::X11(x) = window.deref() {
-                                x.set_activated(ftw_x.eq(&x));
-                                x.configure(None);
+                                let _ = x.set_activated(ftw_x.eq(&x));
+                                let _ = x.configure(None);
                             }
                         }
                     }
@@ -155,8 +155,8 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                                 w.toplevel().send_configure();
                             }
                             WindowElement::X11(x) => {
-                                x.set_activated(false);
-                                x.configure(None);
+                                let _ = x.set_activated(false);
+                                let _ = x.configure(None);
                             }
                         }
                     }
