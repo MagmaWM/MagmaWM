@@ -1,5 +1,7 @@
 use std::{
-    cell::{Ref, RefCell}, hash::Hash, rc::Rc
+    cell::{Ref, RefCell},
+    hash::Hash,
+    rc::Rc,
 };
 
 use smithay::{
@@ -7,7 +9,13 @@ use smithay::{
         element::{surface::WaylandSurfaceRenderElement, AsRenderElements},
         gles::element::PixelShaderElement,
         ImportAll, Renderer, Texture,
-    }, desktop::{space::SpaceElement, Window}, input::{keyboard::KeyboardTarget, pointer::PointerTarget, SeatHandler}, output::Output, utils::{IsAlive, Logical, Point, Rectangle, Scale, Transform}, wayland::seat::WaylandFocus, xwayland::X11Surface
+    },
+    desktop::{space::SpaceElement, Window},
+    input::{keyboard::KeyboardTarget, pointer::PointerTarget, SeatHandler},
+    output::Output,
+    utils::{IsAlive, Logical, Point, Rectangle, Scale, Transform},
+    wayland::seat::WaylandFocus,
+    xwayland::X11Surface,
 };
 
 use crate::state::CONFIG;
@@ -21,11 +29,9 @@ use super::{
 #[derive(Debug, PartialEq, Clone)]
 pub enum WindowElement {
     Wayland(Window),
-    X11(X11Surface)
+    X11(X11Surface),
 }
-impl std::cmp::Eq for WindowElement {
-
-}
+impl std::cmp::Eq for WindowElement {}
 impl Hash for WindowElement {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         core::mem::discriminant(self).hash(state);
@@ -40,35 +46,60 @@ impl IsAlive for WindowElement {
     }
 }
 impl<D: SeatHandler + 'static> PointerTarget<D> for WindowElement {
-    fn enter(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::MotionEvent) {
+    fn enter(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::MotionEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => PointerTarget::enter(w, seat, data, event),
             WindowElement::X11(x) => PointerTarget::enter(x, seat, data, event),
         }
     }
 
-    fn motion(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::MotionEvent) {
+    fn motion(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::MotionEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.motion(seat, data, event),
             WindowElement::X11(x) => x.motion(seat, data, event),
         }
     }
 
-    fn relative_motion(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::RelativeMotionEvent) {
+    fn relative_motion(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::RelativeMotionEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.relative_motion(seat, data, event),
             WindowElement::X11(x) => x.relative_motion(seat, data, event),
         }
     }
 
-    fn button(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::ButtonEvent) {
+    fn button(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::ButtonEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.button(seat, data, event),
             WindowElement::X11(x) => x.button(seat, data, event),
         }
     }
 
-    fn axis(&self, seat: &smithay::input::Seat<D>, data: &mut D, frame: smithay::input::pointer::AxisFrame) {
+    fn axis(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        frame: smithay::input::pointer::AxisFrame,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.axis(seat, data, frame),
             WindowElement::X11(x) => x.axis(seat, data, frame),
@@ -82,63 +113,109 @@ impl<D: SeatHandler + 'static> PointerTarget<D> for WindowElement {
         }
     }
 
-    fn gesture_swipe_begin(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GestureSwipeBeginEvent) {
+    fn gesture_swipe_begin(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GestureSwipeBeginEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_swipe_begin(seat, data, event),
             WindowElement::X11(x) => x.gesture_swipe_begin(seat, data, event),
         }
     }
 
-    fn gesture_swipe_update(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GestureSwipeUpdateEvent) {
+    fn gesture_swipe_update(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GestureSwipeUpdateEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_swipe_update(seat, data, event),
             WindowElement::X11(x) => x.gesture_swipe_update(seat, data, event),
         }
     }
 
-    fn gesture_swipe_end(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GestureSwipeEndEvent) {
+    fn gesture_swipe_end(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GestureSwipeEndEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_swipe_end(seat, data, event),
             WindowElement::X11(x) => x.gesture_swipe_end(seat, data, event),
         }
     }
 
-    fn gesture_pinch_begin(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GesturePinchBeginEvent) {
+    fn gesture_pinch_begin(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GesturePinchBeginEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_pinch_begin(seat, data, event),
             WindowElement::X11(x) => x.gesture_pinch_begin(seat, data, event),
         }
     }
 
-    fn gesture_pinch_update(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GesturePinchUpdateEvent) {
+    fn gesture_pinch_update(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GesturePinchUpdateEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_pinch_update(seat, data, event),
             WindowElement::X11(x) => x.gesture_pinch_update(seat, data, event),
         }
     }
 
-    fn gesture_pinch_end(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GesturePinchEndEvent) {
+    fn gesture_pinch_end(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GesturePinchEndEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_pinch_end(seat, data, event),
             WindowElement::X11(x) => x.gesture_pinch_end(seat, data, event),
         }
     }
 
-    fn gesture_hold_begin(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GestureHoldBeginEvent) {
+    fn gesture_hold_begin(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GestureHoldBeginEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_hold_begin(seat, data, event),
             WindowElement::X11(x) => x.gesture_hold_begin(seat, data, event),
         }
     }
 
-    fn gesture_hold_end(&self, seat: &smithay::input::Seat<D>, data: &mut D, event: &smithay::input::pointer::GestureHoldEndEvent) {
+    fn gesture_hold_end(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        event: &smithay::input::pointer::GestureHoldEndEvent,
+    ) {
         match self {
             WindowElement::Wayland(w) => w.gesture_hold_end(seat, data, event),
             WindowElement::X11(x) => x.gesture_hold_end(seat, data, event),
         }
     }
 
-    fn leave(&self, seat: &smithay::input::Seat<D>, data: &mut D, serial: smithay::utils::Serial, time: u32) {
+    fn leave(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        serial: smithay::utils::Serial,
+        time: u32,
+    ) {
         match self {
             WindowElement::Wayland(w) => PointerTarget::leave(w, seat, data, serial, time),
             WindowElement::X11(x) => PointerTarget::leave(x, seat, data, serial, time),
@@ -147,7 +224,13 @@ impl<D: SeatHandler + 'static> PointerTarget<D> for WindowElement {
 }
 
 impl<D: SeatHandler + 'static> KeyboardTarget<D> for WindowElement {
-    fn enter(&self, seat: &smithay::input::Seat<D>, data: &mut D, keys: Vec<smithay::input::keyboard::KeysymHandle<'_>>, serial: smithay::utils::Serial) {
+    fn enter(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        keys: Vec<smithay::input::keyboard::KeysymHandle<'_>>,
+        serial: smithay::utils::Serial,
+    ) {
         match self {
             WindowElement::Wayland(w) => KeyboardTarget::enter(w, seat, data, keys, serial),
             WindowElement::X11(x) => KeyboardTarget::enter(x, seat, data, keys, serial),
@@ -171,14 +254,24 @@ impl<D: SeatHandler + 'static> KeyboardTarget<D> for WindowElement {
         time: u32,
     ) {
         match self {
-            WindowElement::Wayland(w) => KeyboardTarget::key(w, seat, data, key, state, serial, time),
+            WindowElement::Wayland(w) => {
+                KeyboardTarget::key(w, seat, data, key, state, serial, time)
+            }
             WindowElement::X11(x) => KeyboardTarget::key(x, seat, data, key, state, serial, time),
         }
     }
 
-    fn modifiers(&self, seat: &smithay::input::Seat<D>, data: &mut D, modifiers: smithay::input::keyboard::ModifiersState, serial: smithay::utils::Serial) {
+    fn modifiers(
+        &self,
+        seat: &smithay::input::Seat<D>,
+        data: &mut D,
+        modifiers: smithay::input::keyboard::ModifiersState,
+        serial: smithay::utils::Serial,
+    ) {
         match self {
-            WindowElement::Wayland(w) => KeyboardTarget::modifiers(w, seat, data, modifiers, serial),
+            WindowElement::Wayland(w) => {
+                KeyboardTarget::modifiers(w, seat, data, modifiers, serial)
+            }
             WindowElement::X11(x) => KeyboardTarget::modifiers(x, seat, data, modifiers, serial),
         }
     }
@@ -222,7 +315,9 @@ impl SpaceElement for WindowElement {
 }
 
 impl WaylandFocus for WindowElement {
-    fn wl_surface(&self) -> Option<smithay::reexports::wayland_server::protocol::wl_surface::WlSurface> {
+    fn wl_surface(
+        &self,
+    ) -> Option<smithay::reexports::wayland_server::protocol::wl_surface::WlSurface> {
         match self {
             WindowElement::Wayland(w) => WaylandFocus::wl_surface(w),
             WindowElement::X11(x) => WaylandFocus::wl_surface(x),

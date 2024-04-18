@@ -1,7 +1,8 @@
 use smithay::{
     delegate_xdg_decoration, delegate_xdg_shell,
     desktop::{
-        layer_map_for_output, space::SpaceElement, PopupKind, PopupManager, Window, WindowSurfaceType
+        layer_map_for_output, space::SpaceElement, PopupKind, PopupManager, Window,
+        WindowSurfaceType,
     },
     reexports::{
         wayland_protocols::xdg::{
@@ -53,12 +54,13 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
         let window = self
             .workspaces
             .all_windows()
-            .find(|w| if let WindowElement::Wayland(w) = w.deref() {
+            .find(|w| {
+                if let WindowElement::Wayland(w) = w.deref() {
                     w.toplevel() == &surface
                 } else {
                     false
                 }
-            )
+            })
             .unwrap()
             .clone();
 
@@ -95,25 +97,20 @@ delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 // Should be called on `WlSurface::commit`
 pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager: &PopupManager) {
-    if let Some(window) = workspaces
-        .all_windows()
-        .find(|w| match w.deref() {
-            WindowElement::Wayland(w) => w.toplevel().wl_surface() == surface,
-            WindowElement::X11(x) => x.wl_surface() == Some(surface.clone()),
-        })
-    {
+    if let Some(window) = workspaces.all_windows().find(|w| match w.deref() {
+        WindowElement::Wayland(w) => w.toplevel().wl_surface() == surface,
+        WindowElement::X11(x) => x.wl_surface() == Some(surface.clone()),
+    }) {
         let initial_configure_sent = match window.deref() {
-            WindowElement::Wayland(w) => {
-                with_states(surface, |states| {
-                    states
-                        .data_map
-                        .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
-                        .unwrap()
-                        .lock()
-                        .unwrap()
-                        .initial_configure_sent
-                })
-            },
+            WindowElement::Wayland(w) => with_states(surface, |states| {
+                states
+                    .data_map
+                    .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
+                    .unwrap()
+                    .lock()
+                    .unwrap()
+                    .initial_configure_sent
+            }),
             WindowElement::X11(x) => false,
         };
         if !initial_configure_sent {
@@ -127,10 +124,10 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
                         state.states.set(ToplevelState::TiledBottom);
                     });
                     toplevel.send_configure();
-                },
+                }
                 WindowElement::X11(x) => {
                     x.configure(None).unwrap();
-                },
+                }
             }
         }
     }

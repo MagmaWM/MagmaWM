@@ -35,7 +35,8 @@ use smithay::{
     output::{Mode as WlMode, Output, PhysicalProperties},
     reexports::{
         calloop::{
-            timer::{TimeoutAction, Timer}, EventLoop, LoopHandle, RegistrationToken
+            timer::{TimeoutAction, Timer},
+            EventLoop, LoopHandle, RegistrationToken,
         },
         drm::{
             control::{crtc, ModeTypeFlags},
@@ -54,7 +55,8 @@ use smithay::{
         dmabuf::{DmabufFeedbackBuilder, DmabufGlobal, DmabufHandler, DmabufState, ImportNotifier},
         shell::wlr_layer::Layer,
         shm,
-    }, xwayland::XWaylandEvent,
+    },
+    xwayland::XWaylandEvent,
 };
 use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
@@ -68,8 +70,10 @@ use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::{
         process,
-        render::{border::BorderShader, CustomRenderElements}, workspace::WindowElement,
-    }, xwayland::{self, XWaylandState},
+        render::{border::BorderShader, CustomRenderElements},
+        workspace::WindowElement,
+    },
+    xwayland::{self, XWaylandState},
 };
 
 static CURSOR_DATA: &[u8] = include_bytes!("../../resources/cursor.rgba");
@@ -90,7 +94,7 @@ pub struct UdevData {
     gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
     devices: HashMap<DrmNode, Device>,
     dmabuf_state: Option<(DmabufState, DmabufGlobal)>,
-    xwayland_state: XWaylandState
+    xwayland_state: XWaylandState,
 }
 
 impl DmabufHandler for MagmaState<UdevData> {
@@ -174,7 +178,7 @@ pub fn init_udev() {
         gpus,
         devices: HashMap::new(),
         dmabuf_state: None,
-        xwayland_state
+        xwayland_state,
     };
 
     let mut state = MagmaState::new(event_loop.handle(), event_loop.get_signal(), display, data);
@@ -475,7 +479,12 @@ impl MagmaState<UdevData> {
     }
 
     fn on_xwayland_event(&mut self, event: XWaylandEvent, display: &mut DisplayHandle) {
-        self.backend_data.xwayland_state.on_event(event, self.loop_handle.clone(), display, &mut self.xwm);
+        self.backend_data.xwayland_state.on_event(
+            event,
+            self.loop_handle.clone(),
+            display,
+            &mut self.xwm,
+        );
     }
 }
 
@@ -948,15 +957,18 @@ impl MagmaState<UdevData> {
                 .expect("failed to schedule frame timer");
         }
 
-        self.workspaces.current().windows().for_each(|window| match window.deref() {
-            WindowElement::Wayland(w) => w.send_frame(
-                output,
-                self.start_time.elapsed(),
-                Some(Duration::ZERO),
-                |_, _| Some(output.clone()),
-            ),
-            WindowElement::X11(x) => {/* TODO */},
-        });
+        self.workspaces
+            .current()
+            .windows()
+            .for_each(|window| match window.deref() {
+                WindowElement::Wayland(w) => w.send_frame(
+                    output,
+                    self.start_time.elapsed(),
+                    Some(Duration::ZERO),
+                    |_, _| Some(output.clone()),
+                ),
+                WindowElement::X11(x) => { /* TODO */ }
+            });
         BorderShader::cleanup(renderer.as_mut());
         result
     }

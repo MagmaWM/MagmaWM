@@ -1,30 +1,47 @@
-use std::{cell::RefCell, collections::HashMap, ops::Deref, os::{fd::RawFd, unix::net::UnixStream}, rc::Rc};
+use std::{
+    cell::RefCell,
+    collections::HashMap,
+    ops::Deref,
+    os::{fd::RawFd, unix::net::UnixStream},
+    rc::Rc,
+};
 
 use smithay::{
-    desktop::{space::SpaceElement, Window}, reexports::{calloop::LoopHandle, wayland_server::{
-        Client,
-        DisplayHandle
-    }, x11rb}, utils::{Logical, Rectangle}, wayland::shell::xdg::{ToplevelSurface, XdgShellHandler}, xwayland::{
-        xwm::{Reorder, ResizeEdge, XwmId}, X11Surface, X11Wm, XWayland, XWaylandEvent, XWaylandSource, XwmHandler
-    }
+    desktop::{space::SpaceElement, Window},
+    reexports::{
+        calloop::LoopHandle,
+        wayland_server::{Client, DisplayHandle},
+        x11rb,
+    },
+    utils::{Logical, Rectangle},
+    wayland::shell::xdg::{ToplevelSurface, XdgShellHandler},
+    xwayland::{
+        xwm::{Reorder, ResizeEdge, XwmId},
+        X11Surface, X11Wm, XWayland, XWaylandEvent, XWaylandSource, XwmHandler,
+    },
 };
 use tracing::{debug, error, info};
 
-use crate::{state::{Backend, CalloopData, MagmaState}, utils::{focus::FocusTarget, workspace::{self, MagmaWindow, WindowElement}}};
-
+use crate::{
+    state::{Backend, CalloopData, MagmaState},
+    utils::{
+        focus::FocusTarget,
+        workspace::{self, MagmaWindow, WindowElement},
+    },
+};
 
 #[derive(Debug)]
 struct XWaylandData {
     connection: UnixStream,
     client: Client,
     client_fd: RawFd,
-    display: u32
+    display: u32,
 }
 
 #[derive(Debug)]
 pub struct XWaylandState {
     handle: XWayland,
-    data: Option<XWaylandData>
+    data: Option<XWaylandData>,
 }
 
 impl XWaylandState {
@@ -32,10 +49,7 @@ impl XWaylandState {
     pub fn new(dh: &DisplayHandle) -> (Self, XWaylandSource) {
         let (handle, source) = XWayland::new(dh);
 
-        (
-            Self { handle, data: None },
-            source
-        )
+        (Self { handle, data: None }, source)
     }
 
     /// Start the xwayland server
@@ -44,7 +58,7 @@ impl XWaylandState {
 
         let display = self
             .handle
-            .start(loop_handle, None, env, true, |_|{})
+            .start(loop_handle, None, env, true, |_| {})
             .expect("Failed to start xwayland server!");
 
         display
@@ -55,31 +69,41 @@ impl XWaylandState {
         event: XWaylandEvent,
         loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
         display_handle: &mut DisplayHandle,
-        xwm: &mut Option<X11Wm>
+        xwm: &mut Option<X11Wm>,
     ) {
         match event {
-            XWaylandEvent::Ready { connection, client, client_fd, display } => {
+            XWaylandEvent::Ready {
+                connection,
+                client,
+                client_fd,
+                display,
+            } => {
                 let d = display;
                 info!("Initialized xwayland: fd {}, display {}", client_fd, d);
                 self.data = Some(XWaylandData {
                     connection: connection.try_clone().unwrap(),
                     client: client.clone(),
                     client_fd,
-                    display
+                    display,
                 });
-                *xwm = match X11Wm::start_wm(loop_handle, display_handle.clone(), connection, client) {
+                *xwm = match X11Wm::start_wm(
+                    loop_handle,
+                    display_handle.clone(),
+                    connection,
+                    client,
+                ) {
                     Ok(wm) => Some(wm),
                     Err(e) => {
                         error!(?e, "Failed to start xwayland WM");
                         None
-                    },
+                    }
                 };
-            },
+            }
             XWaylandEvent::Exited => {
                 info!("xwayland exited");
                 self.data = None;
                 *xwm = None;
-            },
+            }
         }
     }
 }
@@ -136,55 +160,80 @@ impl<BackendData: Backend> XwmHandler for CalloopData<BackendData> {
         XwmHandler::configure_notify(&mut self.state, xwm, window, geometry, above)
     }
 
-    fn resize_request(&mut self, xwm: XwmId, window: X11Surface, button: u32, resize_edge: ResizeEdge) {
+    fn resize_request(
+        &mut self,
+        xwm: XwmId,
+        window: X11Surface,
+        button: u32,
+        resize_edge: ResizeEdge,
+    ) {
         XwmHandler::resize_request(&mut self.state, xwm, window, button, resize_edge)
     }
 
     fn move_request(&mut self, xwm: XwmId, window: X11Surface, button: u32) {
         XwmHandler::move_request(&mut self.state, xwm, window, button)
     }
-    
+
     fn map_window_notify(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::map_window_notify(&mut self.state, xwm, window)
     }
-    
+
     fn maximize_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::maximize_request(&mut self.state, xwm, window)
     }
-    
+
     fn unmaximize_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::unmaximize_request(&mut self.state, xwm, window)
     }
-    
+
     fn fullscreen_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::fullscreen_request(&mut self.state, xwm, window)
     }
-    
+
     fn unfullscreen_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::unfullscreen_request(&mut self.state, xwm, window)
     }
-    
+
     fn minimize_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::minimize_request(&mut self.state, xwm, window)
     }
-    
+
     fn unminimize_request(&mut self, xwm: XwmId, window: X11Surface) {
         XwmHandler::unminimize_request(&mut self.state, xwm, window)
     }
-    
-    fn allow_selection_access(&mut self, xwm: XwmId, selection: smithay::wayland::selection::SelectionTarget) -> bool {
+
+    fn allow_selection_access(
+        &mut self,
+        xwm: XwmId,
+        selection: smithay::wayland::selection::SelectionTarget,
+    ) -> bool {
         XwmHandler::allow_selection_access(&mut self.state, xwm, selection)
     }
-    
-    fn send_selection(&mut self, xwm: XwmId, selection: smithay::wayland::selection::SelectionTarget, mime_type: String, fd: std::os::unix::prelude::OwnedFd) {
+
+    fn send_selection(
+        &mut self,
+        xwm: XwmId,
+        selection: smithay::wayland::selection::SelectionTarget,
+        mime_type: String,
+        fd: std::os::unix::prelude::OwnedFd,
+    ) {
         XwmHandler::send_selection(&mut self.state, xwm, selection, mime_type, fd)
     }
-    
-    fn new_selection(&mut self, xwm: XwmId, selection: smithay::wayland::selection::SelectionTarget, mime_types: Vec<String>) {
+
+    fn new_selection(
+        &mut self,
+        xwm: XwmId,
+        selection: smithay::wayland::selection::SelectionTarget,
+        mime_types: Vec<String>,
+    ) {
         XwmHandler::new_selection(&mut self.state, xwm, selection, mime_types)
     }
-    
-    fn cleared_selection(&mut self, xwm: XwmId, selection: smithay::wayland::selection::SelectionTarget) {
+
+    fn cleared_selection(
+        &mut self,
+        xwm: XwmId,
+        selection: smithay::wayland::selection::SelectionTarget,
+    ) {
         XwmHandler::cleared_selection(&mut self.state, xwm, selection)
     }
 }
@@ -198,8 +247,7 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         debug!("New x11 window");
     }
 
-    fn new_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {
-    }
+    fn new_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {}
 
     fn map_window_request(&mut self, xwm: XwmId, window: X11Surface) {
         window.set_mapped(true).unwrap();
@@ -227,10 +275,7 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         let window = WindowElement::X11(window);
         self.workspaces
             .current_mut()
-            .add_window(Rc::new(RefCell::new(MagmaWindow {
-                window,
-                rec
-            })));
+            .add_window(Rc::new(RefCell::new(MagmaWindow { window, rec })));
         debug!("Override mapped new x11 window");
     }
 
@@ -280,7 +325,13 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         info!("TODO: x11 configure_notify");
     }
 
-    fn resize_request(&mut self, xwm: XwmId, window: X11Surface, button: u32, resize_edge: ResizeEdge) {
+    fn resize_request(
+        &mut self,
+        xwm: XwmId,
+        window: X11Surface,
+        button: u32,
+        resize_edge: ResizeEdge,
+    ) {
         info!("TODO: x11 resize_request");
     }
 

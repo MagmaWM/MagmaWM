@@ -19,14 +19,21 @@ use smithay::{
         },
         seat::WaylandFocus,
         selection::{
-            data_device::{set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, DataDeviceState, ServerDndGrabHandler}, primary_selection::{set_primary_focus, PrimarySelectionHandler, PrimarySelectionState},
+            data_device::{
+                set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, DataDeviceState,
+                ServerDndGrabHandler,
+            },
+            primary_selection::{
+                set_primary_focus, PrimarySelectionHandler, PrimarySelectionState,
+            },
             SelectionHandler,
         },
         shell::wlr_layer::{
             Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
         },
         shm::{ShmHandler, ShmState},
-    }, xwayland::XWaylandClientData,
+    },
+    xwayland::XWaylandClientData,
 };
 use tracing::error;
 
@@ -61,17 +68,13 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
             while let Some(parent) = get_parent(&root) {
                 root = parent;
             }
-            if let Some(window) = self
-                .workspaces
-                .all_windows()
-                .find(|w| match w.deref() {
-                    WindowElement::Wayland(w) => w.toplevel().wl_surface() == &root,
-                    WindowElement::X11(x) => match x.wl_surface() {
-                        Some(s) => s == root,
-                        None => false,
-                    },
-                })
-            {
+            if let Some(window) = self.workspaces.all_windows().find(|w| match w.deref() {
+                WindowElement::Wayland(w) => w.toplevel().wl_surface() == &root,
+                WindowElement::X11(x) => match x.wl_surface() {
+                    Some(s) => s == root,
+                    None => false,
+                },
+            }) {
                 match window.deref() {
                     WindowElement::Wayland(w) => w.on_commit(),
                     WindowElement::X11(x) => x.refresh(),
@@ -134,7 +137,7 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                                 w.toplevel().send_configure();
                             }
                         }
-                    },
+                    }
                     WindowElement::X11(ftw_x) => {
                         for window in self.workspaces.all_windows() {
                             if let WindowElement::X11(x) = window.deref() {
@@ -142,19 +145,19 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                                 x.configure(None);
                             }
                         }
-                    },
-                }
+                    }
+                },
                 FocusTarget::LayerSurface(_) => {
                     for window in self.workspaces.all_windows() {
                         match window.deref() {
                             WindowElement::Wayland(w) => {
                                 w.set_activated(false);
-                                w.toplevel().send_configure();        
-                            },
+                                w.toplevel().send_configure();
+                            }
                             WindowElement::X11(x) => {
                                 x.set_activated(false);
-                                x.configure(None);        
-                            },
+                                x.configure(None);
+                            }
                         }
                     }
                 }

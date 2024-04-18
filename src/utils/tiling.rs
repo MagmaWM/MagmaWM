@@ -73,10 +73,14 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
                     state.size = Some(magmawindow.rec.size);
                 });
                 xdg_toplevel.send_configure();
-            },
+            }
             WindowElement::X11(x) => {
-                x.configure(Some(Rectangle { loc: magmawindow.rec.loc, size: magmawindow.rec.size })).unwrap();
-            },
+                x.configure(Some(Rectangle {
+                    loc: magmawindow.rec.loc,
+                    size: magmawindow.rec.size,
+                }))
+                .unwrap();
+            }
         }
     }
 }

@@ -286,24 +286,27 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
                             .unwrap_or_default()
                     })
                 ),
-                WindowElement::X11(x) => if let Some(surface) = x.wl_surface() {
-                    format!(
-                    "xwayland Window {} ({})",
-                    surface.id().protocol_id(),
-                    with_states(&surface, |states| {
-                        states
-                            .data_map
-                            .get::<XdgToplevelSurfaceData>()
-                            .unwrap()
-                            .lock()
-                            .unwrap()
-                            .title
-                            .clone()
-                            .unwrap_or_default()
-                    })
-                )} else {
-                    "xwayland Window (no wl_surface)".to_string()
-                },
+                WindowElement::X11(x) => {
+                    if let Some(surface) = x.wl_surface() {
+                        format!(
+                            "xwayland Window {} ({})",
+                            surface.id().protocol_id(),
+                            with_states(&surface, |states| {
+                                states
+                                    .data_map
+                                    .get::<XdgToplevelSurfaceData>()
+                                    .unwrap()
+                                    .lock()
+                                    .unwrap()
+                                    .title
+                                    .clone()
+                                    .unwrap_or_default()
+                            })
+                        )
+                    } else {
+                        "xwayland Window (no wl_surface)".to_string()
+                    }
+                }
             },
             FocusTarget::LayerSurface(l) => {
                 format!("LayerSurface {}", l.wl_surface().id().protocol_id())

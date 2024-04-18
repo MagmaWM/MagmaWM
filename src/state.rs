@@ -2,9 +2,7 @@ use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use once_cell::sync::Lazy;
 use smithay::{
-    desktop::{
-        layer_map_for_output, PopupManager,
-    },
+    desktop::{layer_map_for_output, PopupManager},
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -24,11 +22,15 @@ use smithay::{
         },
         shm::ShmState,
         socket::ListeningSocketSource,
-    }, xwayland::X11Wm,
+    },
+    xwayland::X11Wm,
 };
 use tracing::warn;
 
-use crate::utils::{focus::FocusTarget, workspace::{WindowElement, Workspaces}};
+use crate::utils::{
+    focus::FocusTarget,
+    workspace::{WindowElement, Workspaces},
+};
 use crate::{
     config::{load_config, Config},
     debug::MagmaDebug,

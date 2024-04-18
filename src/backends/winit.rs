@@ -337,7 +337,7 @@ pub fn winit_dispatch(
             Some(Duration::ZERO),
             |_, _| Some(output.clone()),
         ),
-        WindowElement::X11(x) => {/* TODO */},
+        WindowElement::X11(x) => { /* TODO */ }
     });
 
     workspace.windows().for_each(|e| e.refresh());
