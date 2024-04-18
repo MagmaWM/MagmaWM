@@ -10,8 +10,6 @@ pkgs.rustPlatform.buildRustPackage {
   pname = "magmawm";
   src = lib.cleanSource ./.;
 
-  
-
   buildInputs = with pkgs; [
     libdrm
     libglvnd
