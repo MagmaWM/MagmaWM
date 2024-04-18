@@ -1,10 +1,5 @@
 use chrono::Local;
-use std::{
-    fs,
-    fs::File,
-    os,
-    path::{Path, PathBuf},
-};
+use std::{fs, fs::File, os, path::PathBuf};
 use tracing_subscriber::{
     filter::{EnvFilter, LevelFilter},
     layer::SubscriberExt,
@@ -57,7 +52,7 @@ pub fn init_logs<S: AsRef<str>>(log_level: Option<S>) {
     });
 
     // delete latest.log if it already exists
-    if Path::new(&log_link_path).exists() {
+    if log_link_path.exists() {
         fs::remove_file(&log_link_path).unwrap_or_else(|e| {
             panic!(
                 "Unable to remove '{}': {e}",
