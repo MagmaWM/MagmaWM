@@ -1,6 +1,6 @@
 use std::{cell::RefCell, rc::Rc};
 
-use crate::state::CONFIG;
+use crate::{state::CONFIG, utils::workspace::WindowElement};
 use smithay::{
     desktop::layer_map_for_output,
     utils::{Logical, Physical, Point, Rectangle, Size},
@@ -66,11 +66,18 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
     }
     debug!("{:#?}", workspace.layout_tree);
     for magmawindow in workspace.magmawindows() {
-        let xdg_toplevel = magmawindow.window.toplevel();
-        xdg_toplevel.with_pending_state(|state| {
-            state.size = Some(magmawindow.rec.size);
-        });
-        xdg_toplevel.send_configure();
+        match &magmawindow.window {
+            WindowElement::Wayland(w) => {
+                let xdg_toplevel = w.toplevel();
+                xdg_toplevel.with_pending_state(|state| {
+                    state.size = Some(magmawindow.rec.size);
+                });
+                xdg_toplevel.send_configure();
+            },
+            WindowElement::X11(x) => {
+                x.configure(Some(Rectangle { loc: magmawindow.rec.loc, size: magmawindow.rec.size })).unwrap();
+            },
+        }
     }
 }
 

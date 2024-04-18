@@ -1,4 +1,3 @@
-use smithay::desktop::Window;
 pub use smithay::{
     backend::input::KeyState,
     desktop::{LayerSurface, PopupKind},
@@ -14,9 +13,11 @@ pub use smithay::{
 
 use crate::state::{Backend, MagmaState};
 
+use super::workspace::WindowElement;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FocusTarget {
-    Window(Window),
+    Window(WindowElement),
     LayerSurface(LayerSurface),
     Popup(PopupKind),
 }
@@ -274,8 +275,8 @@ impl WaylandFocus for FocusTarget {
     }
 }
 
-impl From<Window> for FocusTarget {
-    fn from(w: Window) -> Self {
+impl From<WindowElement> for FocusTarget {
+    fn from(w: WindowElement) -> Self {
         FocusTarget::Window(w)
     }
 }

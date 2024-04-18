@@ -1,4 +1,4 @@
-use std::time::Duration;
+use std::{ops::Deref, time::Duration};
 
 use smithay::{
     backend::{
@@ -32,7 +32,7 @@ use smithay::{
 };
 use tracing::{info, warn};
 
-use crate::utils::process;
+use crate::utils::{process, workspace::WindowElement};
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlowRenderer>,
@@ -330,13 +330,14 @@ pub fn winit_dispatch(
     winitdata.backend.submit(Some(&[damage])).unwrap();
     #[cfg(feature = "debug")]
     state.debug.fps.displayed();
-    workspace.windows().for_each(|window| {
-        window.send_frame(
+    workspace.windows().for_each(|window| match window.deref() {
+        WindowElement::Wayland(w) => w.send_frame(
             output,
             state.start_time.elapsed(),
             Some(Duration::ZERO),
             |_, _| Some(output.clone()),
-        )
+        ),
+        WindowElement::X11(x) => {/* TODO */},
     });
 
     workspace.windows().for_each(|e| e.refresh());

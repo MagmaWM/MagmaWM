@@ -35,6 +35,7 @@ features = [
     "backend_egl",
     "backend_libinput",
     "use_system_lib",
+    "xwayland"
 ]
 
 [dependencies.smithay-egui]

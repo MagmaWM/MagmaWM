@@ -1,7 +1,7 @@
 use smithay::{
     delegate_xdg_decoration, delegate_xdg_shell,
     desktop::{
-        PopupKind, PopupManager, WindowSurfaceType, {layer_map_for_output, Window},
+        layer_map_for_output, space::SpaceElement, PopupKind, PopupManager, Window, WindowSurfaceType
     },
     reexports::{
         wayland_protocols::xdg::{
@@ -23,14 +23,14 @@ use smithay::{
         },
     },
 };
-use std::{cell::RefCell, rc::Rc, sync::Mutex};
+use std::{cell::RefCell, ops::Deref, rc::Rc, sync::Mutex};
 use tracing::warn;
 
 use crate::{
     state::{Backend, MagmaState},
     utils::{
         focus::FocusTarget,
-        workspace::{MagmaWindow, Workspaces},
+        workspace::{MagmaWindow, WindowElement, Workspaces},
     },
 };
 
@@ -40,7 +40,7 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     }
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
-        let window = Window::new(surface);
+        let window = WindowElement::Wayland(Window::new(surface));
         self.workspaces
             .current_mut()
             .add_window(Rc::new(RefCell::new(MagmaWindow {
@@ -53,7 +53,12 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
         let window = self
             .workspaces
             .all_windows()
-            .find(|w| w.toplevel() == &surface)
+            .find(|w| if let WindowElement::Wayland(w) = w.deref() {
+                    w.toplevel() == &surface
+                } else {
+                    false
+                }
+            )
             .unwrap()
             .clone();
 
@@ -92,26 +97,41 @@ delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager: &PopupManager) {
     if let Some(window) = workspaces
         .all_windows()
-        .find(|w| w.toplevel().wl_surface() == surface)
+        .find(|w| match w.deref() {
+            WindowElement::Wayland(w) => w.toplevel().wl_surface() == surface,
+            WindowElement::X11(x) => x.wl_surface() == Some(surface.clone()),
+        })
     {
-        let initial_configure_sent = with_states(surface, |states| {
-            states
-                .data_map
-                .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
-                .unwrap()
-                .lock()
-                .unwrap()
-                .initial_configure_sent
-        });
+        let initial_configure_sent = match window.deref() {
+            WindowElement::Wayland(w) => {
+                with_states(surface, |states| {
+                    states
+                        .data_map
+                        .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
+                        .unwrap()
+                        .lock()
+                        .unwrap()
+                        .initial_configure_sent
+                })
+            },
+            WindowElement::X11(x) => false,
+        };
         if !initial_configure_sent {
-            let toplevel = window.toplevel();
-            toplevel.with_pending_state(|state| {
-                state.states.set(ToplevelState::TiledLeft);
-                state.states.set(ToplevelState::TiledRight);
-                state.states.set(ToplevelState::TiledTop);
-                state.states.set(ToplevelState::TiledBottom);
-            });
-            toplevel.send_configure();
+            match window.deref() {
+                WindowElement::Wayland(w) => {
+                    let toplevel = w.toplevel();
+                    toplevel.with_pending_state(|state| {
+                        state.states.set(ToplevelState::TiledLeft);
+                        state.states.set(ToplevelState::TiledRight);
+                        state.states.set(ToplevelState::TiledTop);
+                        state.states.set(ToplevelState::TiledBottom);
+                    });
+                    toplevel.send_configure();
+                },
+                WindowElement::X11(x) => {
+                    x.configure(None).unwrap();
+                },
+            }
         }
     }
 
