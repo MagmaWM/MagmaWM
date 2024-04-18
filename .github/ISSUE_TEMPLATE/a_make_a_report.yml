@@ -9,7 +9,7 @@ body:
       label: Checklist
       description:
       options:
-        - label: I'm reporting a problem with Magmawm
+        - label: I'm reporting a problem with MagmaWM
           required: true
         - label: I've verified that I'm running **the most** recent nightly build or stable release
           required: true
@@ -49,4 +49,4 @@ body:
     attributes:
       label: OS and Magma Version
       description: The name of your Operating System and the version shown in Magma --v
-      placeholder: Magmawm 2.3.5 (commit 81a62764, 2022-04-05) on arch, kernel 6.8.1
+      placeholder: MagmaWM git (commit 766d0d0)
