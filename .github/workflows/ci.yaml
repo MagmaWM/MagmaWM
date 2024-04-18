@@ -11,9 +11,6 @@ env:
 
 jobs:
   check:
-    needs:
-      - clippy-check
-      - format
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
