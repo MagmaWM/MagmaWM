@@ -28,16 +28,17 @@ use smithay::{
             ImportNotifier,
         },
         shell::wlr_layer::Layer,
-    },
+    }, xwayland::XWaylandEvent,
 };
 use tracing::{info, warn};
 
-use crate::utils::{process, workspace::WindowElement};
+use crate::{utils::{process, workspace::WindowElement}, xwayland::{self, XWaylandState}};
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
     dmabuf_state: (DmabufState, DmabufGlobal, Option<DmabufFeedback>),
+    xwayland_state: XWaylandState,
 }
 
 impl DmabufHandler for MagmaState<WinitData> {
@@ -155,12 +156,17 @@ pub fn init_winit() {
         info!("EGL hardware-acceleration enabled");
     };
 
+    let display_handle: DisplayHandle = display.handle().clone();
+    
+    let (xwayland_state, xwayland_source) = xwayland::XWaylandState::new(&display_handle);
+    xwayland_state.start(event_loop.handle());
+
     let winitdata = WinitData {
         backend,
         damage_tracker: damage_tracked_renderer,
         dmabuf_state,
+        xwayland_state
     };
-    let display_handle: DisplayHandle = display.handle().clone();
     let state = MagmaState::new(
         event_loop.handle(),
         event_loop.get_signal(),
@@ -193,6 +199,17 @@ pub fn init_winit() {
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })
         .unwrap();
+
+    info!("Registering event handler for xwayland");
+    event_loop
+        .handle()
+        .insert_source(xwayland_source, move |event, _, calloopdata| {
+            calloopdata
+                .state
+                .on_xwayland_event(event, &mut calloopdata.display_handle)
+        })
+        .unwrap();
+
 
     for command in &CONFIG.autostart {
         process::spawn(command);
@@ -344,4 +361,15 @@ pub fn winit_dispatch(
     data.display_handle.flush_clients().unwrap();
     state.popup_manager.cleanup();
     BorderShader::cleanup(winitdata.backend.renderer());
+}
+
+impl MagmaState<WinitData> {
+    fn on_xwayland_event(&mut self, event: XWaylandEvent, display: &mut DisplayHandle) {
+        self.backend_data.xwayland_state.on_event(
+            event,
+            self.loop_handle.clone(),
+            display,
+            &mut self.xwm,
+        );
+    }
 }
