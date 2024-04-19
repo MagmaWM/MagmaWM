@@ -15,17 +15,17 @@ use smithay::{
             get_parent, is_sync_subsurface, CompositorClientState, CompositorHandler,
             CompositorState,
         },
+        output::OutputHandler,
         seat::WaylandFocus,
         selection::{
-            data_device::DataDeviceState, primary_selection::PrimarySelectionState,
-            SelectionHandler,
-        },
-        selection::{
             data_device::{
-                set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler,
+                set_data_device_focus, ClientDndGrabHandler, DataDeviceHandler, DataDeviceState,
                 ServerDndGrabHandler,
             },
-            primary_selection::{set_primary_focus, PrimarySelectionHandler},
+            primary_selection::{
+                set_primary_focus, PrimarySelectionHandler, PrimarySelectionState,
+            },
+            SelectionHandler,
         },
         shell::wlr_layer::{
             Layer, LayerSurface as WlrLayerSurface, WlrLayerShellHandler, WlrLayerShellState,
@@ -61,7 +61,7 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
             if let Some(window) = self
                 .workspaces
                 .all_windows()
-                .find(|w| w.toplevel().wl_surface() == &root)
+                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
             {
                 window.on_commit();
             }
@@ -92,6 +92,7 @@ delegate_shm!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
     type KeyboardFocus = FocusTarget;
     type PointerFocus = FocusTarget;
+    type TouchFocus = WlSurface;
 
     fn seat_state(&mut self) -> &mut SeatState<MagmaState<BackendData>> {
         &mut self.seat_state
@@ -121,13 +122,13 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                         } else {
                             window.set_activated(false);
                         }
-                        window.toplevel().send_configure();
+                        window.toplevel().unwrap().send_configure();
                     }
                 }
                 FocusTarget::LayerSurface(_) => {
                     for window in self.workspaces.all_windows() {
                         window.set_activated(false);
-                        window.toplevel().send_configure();
+                        window.toplevel().unwrap().send_configure();
                     }
                 }
                 FocusTarget::Popup(_) => {}
@@ -168,6 +169,7 @@ delegate_primary_selection!(@<BackendData: Backend + 'static> MagmaState<Backend
 // Wl Output & Xdg Output
 //
 
+impl<BackendData: Backend> OutputHandler for MagmaState<BackendData> {}
 delegate_output!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {

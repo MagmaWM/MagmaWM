@@ -40,7 +40,7 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
     }
 
     fn new_toplevel(&mut self, surface: ToplevelSurface) {
-        let window = Window::new(surface);
+        let window = Window::new_wayland_window(surface);
         self.workspaces
             .current_mut()
             .add_window(Rc::new(RefCell::new(MagmaWindow {
@@ -53,7 +53,7 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
         let window = self
             .workspaces
             .all_windows()
-            .find(|w| w.toplevel() == &surface)
+            .find(|w| w.toplevel().unwrap() == &surface)
             .unwrap()
             .clone();
 
@@ -92,7 +92,7 @@ delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager: &PopupManager) {
     if let Some(window) = workspaces
         .all_windows()
-        .find(|w| w.toplevel().wl_surface() == surface)
+        .find(|w| w.toplevel().unwrap().wl_surface() == surface)
     {
         let initial_configure_sent = with_states(surface, |states| {
             states
@@ -105,13 +105,13 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
         });
         if !initial_configure_sent {
             let toplevel = window.toplevel();
-            toplevel.with_pending_state(|state| {
+            toplevel.unwrap().with_pending_state(|state| {
                 state.states.set(ToplevelState::TiledLeft);
                 state.states.set(ToplevelState::TiledRight);
                 state.states.set(ToplevelState::TiledTop);
                 state.states.set(ToplevelState::TiledBottom);
             });
-            toplevel.send_configure();
+            toplevel.unwrap().send_configure();
         }
     }
 
