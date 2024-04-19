@@ -98,7 +98,7 @@ impl Workspace {
         renderer: &mut R,
     ) -> Vec<C>
     where
-        <R as Renderer>::TextureId: Texture + 'static,
+        <R as Renderer>::TextureId: Clone + Texture + 'static,
     {
         let mut render_elements: Vec<C> = Vec::new();
         for element in &self.windows {
