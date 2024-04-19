@@ -114,8 +114,8 @@ pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager
         });
         if !initial_configure_sent {
             let toplevel = window.toplevel();
-            if toplevel.is_some() {
-                toplevel.unwrap().with_pending_state(|state| {
+            if let Some(tl) = toplevel {
+                tl.with_pending_state(|state| {
                     state.states.set(ToplevelState::TiledLeft);
                     state.states.set(ToplevelState::TiledRight);
                     state.states.set(ToplevelState::TiledTop);

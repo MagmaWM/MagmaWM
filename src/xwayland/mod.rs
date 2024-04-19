@@ -234,10 +234,7 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
         window.set_mapped(true).unwrap();
         let rec = window.geometry();
         let window = Window::new_x11_window(window);
-        let magma_window = MagmaWindow {
-            window: window,
-            rec,
-        };
+        let magma_window = MagmaWindow { window, rec };
         self.workspaces
             .current_mut()
             .add_window(Rc::new(RefCell::new(magma_window)));
