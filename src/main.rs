@@ -1,11 +1,13 @@
-use tracing::{error, info};
-
 use std::{panic, thread};
 
-use crate::backends::{udev, winit};
 use backtrace::Backtrace;
-use chrono::Local;
-use tracing_subscriber::fmt::writer::MakeWriterExt;
+use clap::{Parser, ValueEnum};
+use tracing::{error, info};
+
+use crate::{
+    backends::{udev, winit},
+    utils::log::init_logs,
+};
 
 mod backends;
 mod config;
@@ -16,29 +18,31 @@ mod protocols;
 mod state;
 mod utils;
 
-static POSSIBLE_BACKENDS: &[&str] = &[
-    "--winit : Run magma as a X11 or Wayland client using winit.",
-    "--tty-udev : Run magma as a tty udev client (requires root if without logind).",
-];
+#[derive(Parser, Debug)]
+#[command(version, about, long_about = None)]
+struct Args {
+    #[arg(short, long, default_value = "auto")]
+    backend: Backend,
+    /// Specify log level (fatal, error, warn, info, debug, trace)
+    #[arg(long, name = "LEVEL")]
+    log: Option<String>,
+}
+
+#[derive(Debug, Clone, ValueEnum)]
+enum Backend {
+    /// Run Magma as an X11 or Wayland client using winit
+    Winit,
+    /// Run Magma as a tty udev client (requires root if without logind)
+    TtyUdev,
+    /// Automatically select a backend
+    Auto,
+}
+
 fn main() {
-    let log_dir = format!(
-        "{}/.local/share/MagmaWM/",
-        std::env::var("HOME").expect("this should always be set")
-    );
-    let file_appender = tracing_appender::rolling::never(
-        &log_dir,
-        format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S")),
-    );
-    let latest_file_appender = tracing_appender::rolling::never(&log_dir, "latest.log");
-    let log_appender = std::io::stdout.and(file_appender).and(latest_file_appender);
-    if let Ok(env_filter) = tracing_subscriber::EnvFilter::try_from_default_env() {
-        tracing_subscriber::fmt()
-            .with_writer(log_appender)
-            .with_env_filter(env_filter)
-            .init();
-    } else {
-        tracing_subscriber::fmt().with_writer(log_appender).init();
-    }
+    let args = Args::parse();
+
+    init_logs(args.log);
+
     panic::set_hook(Box::new(move |info| {
         let backtrace = Backtrace::new();
 
@@ -56,7 +60,8 @@ fn main() {
         match info.location() {
             Some(location) => {
                 error!(
-                    target: "panic", "thread '{}' panicked at '{}': {}:{}{:?}",
+                    target: "panic",
+                    "thread '{}' panicked at '{}': {}:{}{:?}",
                     thread,
                     msg,
                     location.file(),
@@ -74,26 +79,16 @@ fn main() {
         }
     }));
 
-    let arg = ::std::env::args().nth(1);
-    match arg.as_ref().map(|s| &s[..]) {
-        Some("--winit") => {
+    match args.backend {
+        Backend::Winit => {
             info!("Starting magmawn with winit backend");
             winit::init_winit();
         }
-        Some("--tty-udev") => {
+        Backend::TtyUdev => {
             info!("Starting magma on a tty using udev");
             udev::init_udev();
         }
-        Some(other) => {
-            error!("Unknown backend: {}", other);
-            info!("Possible backends are:");
-            for line in POSSIBLE_BACKENDS {
-                println!("{}", line);
-            }
-        }
-        None => {
-            backends::init_backend_auto();
-        }
+        Backend::Auto => backends::init_backend_auto(),
     }
 
     info!("Magma is shutting down");
