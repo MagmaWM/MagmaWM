@@ -67,8 +67,7 @@ pub struct KeyModifiers {
     logo: bool,
 }
 
-/// Describtion of a key combination that might be
-/// handled by the compositor.
+/// Description of a key combination that might be handled by the compositor
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Hash, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct KeyPattern {
