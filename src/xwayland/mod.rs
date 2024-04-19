@@ -73,7 +73,7 @@ impl XWaylandState {
                 ) {
                     Ok(wm) => Some(wm),
                     Err(e) => {
-                        error!(?e, "Failed to start xwaylacnd WM");
+                        error!(?e, "Failed to start xwayland WM");
                         None
                     }
                 };
