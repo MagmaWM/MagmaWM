@@ -21,6 +21,7 @@ use crate::{
     config::Action,
     state::{Backend, MagmaState, CONFIG},
     utils::focus::FocusTarget,
+    utils::process,
 };
 
 impl MagmaState<UdevData> {
@@ -333,7 +334,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     .current()
                     .window_under(self.pointer_location)
                 {
-                    d.0.toplevel().send_close()
+                    d.0.toplevel().unwrap().send_close()
                 }
             }
             Action::Workspace(id) => {
@@ -357,13 +358,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
             }
             Action::ToggleWindowFloating => todo!(),
             Action::Spawn(command) => {
-                if let Err(err) = std::process::Command::new("/bin/sh")
-                    .arg("-c")
-                    .arg(command.clone())
-                    .spawn()
-                {
-                    info!("{} {} {}", err, "Failed to spawn \"{}\"", command);
-                }
+                process::spawn(&command);
             }
             Action::VTSwitch(_) => {
                 info!("VTSwitch is not used in Winit backend.")

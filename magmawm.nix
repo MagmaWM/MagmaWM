@@ -1,6 +1,5 @@
 { lib
 , pkgs
-, rust-toolchain
 , version
 , ...
 }:
@@ -9,8 +8,6 @@ pkgs.rustPlatform.buildRustPackage {
   inherit version;
   pname = "magmawm";
   src = lib.cleanSource ./.;
-
-  rust = pkgs.rust-bin."${rust-toolchain}".latest.default;
 
   buildInputs = with pkgs; [
     libdrm
@@ -36,7 +33,7 @@ pkgs.rustPlatform.buildRustPackage {
   cargoLock = {
     lockFile = ./Cargo.lock;
     outputHashes = {
-      "smithay-0.3.0" = "sha256-UQwYV3GOkZHEFyAMRMY46JiFXsdsjfSVHAHlA47ZAtI=";
+      "smithay-0.3.0" = "sha256-tScCvnZ+rpfloO0HsLHWL50MfRrGo8/YQt/u1OYZdws=";
       "smithay-drm-extras-0.1.0" = "sha256-2DrVZ4FiCmAr3DlUfnlb4c1tkcG8ydVHYMG5FUvCTrI=";
       "smithay-egui-0.1.0" = "sha256-FcSoKCwYk3okwQURiQlDUcfk9m/Ne6pSblGAzHDaVHg=";
     };

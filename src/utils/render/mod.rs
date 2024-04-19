@@ -1,16 +1,19 @@
 use std::borrow::BorrowMut;
 
 use smithay::{
-    backend::renderer::{
-        element::{
-            surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
-            RenderElement,
+    backend::{
+        drm::DrmDeviceFd,
+        renderer::{
+            element::{
+                surface::WaylandSurfaceRenderElement, texture::TextureRenderElement, Element, Id,
+                RenderElement,
+            },
+            gles::{element::PixelShaderElement, GlesFrame, GlesTexture, Uniform},
+            glow::{GlowFrame, GlowRenderer},
+            multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
+            utils::{CommitCounter, DamageSet},
+            ImportAll, ImportMem, Renderer, Texture,
         },
-        gles::{element::PixelShaderElement, GlesFrame, GlesTexture, Uniform},
-        glow::{GlowFrame, GlowRenderer},
-        multigpu::{gbm::GbmGlesBackend, Error as MultiError, MultiFrame, MultiRenderer},
-        utils::CommitCounter,
-        ImportAll, ImportMem, Renderer, Texture,
     },
     utils::{Buffer, Physical, Rectangle, Scale},
 };
@@ -21,11 +24,19 @@ use self::{border::BorderShader, corners::CornerShader};
 pub mod border;
 pub mod corners;
 
-pub type GlMultiRenderer<'a, 'b> =
-    MultiRenderer<'a, 'a, 'b, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
-pub type GlMultiFrame<'a, 'b, 'frame> =
-    MultiFrame<'a, 'a, 'b, 'frame, GbmGlesBackend<GlowRenderer>, GbmGlesBackend<GlowRenderer>>;
-
+pub type GlMultiRenderer<'a> = MultiRenderer<
+    'a,
+    'a,
+    GbmGlesBackend<GlowRenderer, DrmDeviceFd>,
+    GbmGlesBackend<GlowRenderer, DrmDeviceFd>,
+>;
+pub type GlMultiFrame<'a, 'frame> = MultiFrame<
+    'a,
+    'a,
+    'frame,
+    GbmGlesBackend<GlowRenderer, DrmDeviceFd>,
+    GbmGlesBackend<GlowRenderer, DrmDeviceFd>,
+>;
 pub enum CustomRenderElements<R>
 where
     R: Renderer,
@@ -100,7 +111,7 @@ where
         &self,
         scale: Scale<f64>,
         commit: Option<CommitCounter>,
-    ) -> Vec<Rectangle<i32, Physical>> {
+    ) -> DamageSet<i32, Physical> {
         match self {
             CustomRenderElements::Texture(elem) => elem.damage_since(scale, commit),
             CustomRenderElements::Surface(elem) => elem.damage_since(scale, commit),
@@ -119,16 +130,14 @@ where
     }
 }
 
-impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
-    for CustomRenderElements<GlMultiRenderer<'a, 'b>>
-{
+impl<'a> RenderElement<GlMultiRenderer<'a>> for CustomRenderElements<GlMultiRenderer<'a>> {
     fn draw<'frame>(
         &self,
-        frame: &mut GlMultiFrame<'a, 'b, 'frame>,
+        frame: &mut GlMultiFrame<'a, 'frame>,
         src: Rectangle<f64, Buffer>,
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
-    ) -> Result<(), <GlMultiRenderer<'a, 'b> as Renderer>::Error> {
+    ) -> Result<(), <GlMultiRenderer<'a> as Renderer>::Error> {
         match self {
             CustomRenderElements::Texture(elem) => {
                 RenderElement::<GlowRenderer>::draw(elem, frame.as_mut(), src, dst, damage)
@@ -145,7 +154,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
 
     fn underlying_storage(
         &self,
-        renderer: &mut GlMultiRenderer<'a, 'b>,
+        renderer: &mut GlMultiRenderer<'a>,
     ) -> Option<smithay::backend::renderer::element::UnderlyingStorage> {
         match self {
             CustomRenderElements::Texture(elem) => elem.underlying_storage(renderer.as_mut()),
@@ -230,7 +239,7 @@ impl AsGlowRenderer for GlowRenderer {
     }
 }
 
-impl<'a, 'b> AsGlowRenderer for GlMultiRenderer<'a, 'b> {
+impl<'a> AsGlowRenderer for GlMultiRenderer<'a> {
     fn glow_renderer(&self) -> &GlowRenderer {
         self.as_ref()
     }
@@ -281,7 +290,7 @@ where
         &self,
         scale: Scale<f64>,
         commit: Option<CommitCounter>,
-    ) -> Vec<Rectangle<i32, Physical>> {
+    ) -> DamageSet<i32, smithay::utils::Physical> {
         self.inner.damage_since(scale, commit)
     }
 
@@ -299,16 +308,14 @@ where
     }
 }
 
-impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
-    for WindowRenderElement<GlMultiRenderer<'a, 'b>>
-{
+impl<'a> RenderElement<GlMultiRenderer<'a>> for WindowRenderElement<GlMultiRenderer<'a>> {
     fn draw(
         &self,
-        frame: &mut <GlMultiRenderer<'a, 'b> as Renderer>::Frame<'_>,
+        frame: &mut <GlMultiRenderer<'a> as Renderer>::Frame<'_>,
         src: Rectangle<f64, Buffer>,
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
-    ) -> Result<(), <GlMultiRenderer<'a, 'b> as Renderer>::Error> {
+    ) -> Result<(), <GlMultiRenderer<'a> as Renderer>::Error> {
         let size = self
             .geometry(Scale::from(1.0))
             .size
@@ -329,7 +336,7 @@ impl<'a, 'b> RenderElement<GlMultiRenderer<'a, 'b>>
 
     fn underlying_storage(
         &self,
-        renderer: &mut GlMultiRenderer<'a, 'b>,
+        renderer: &mut GlMultiRenderer<'a>,
     ) -> Option<smithay::backend::renderer::element::UnderlyingStorage> {
         self.inner.underlying_storage(renderer)
     }
