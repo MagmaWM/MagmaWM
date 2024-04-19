@@ -136,7 +136,6 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                         }
                         if let Some(tl) = window.toplevel() {
                             tl.send_configure();
-                            continue;
                         }
                         #[cfg(feature = "xwayland")]
                         if let Some(xs) = window.x11_surface() {
@@ -147,7 +146,13 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                 FocusTarget::LayerSurface(_) => {
                     for window in self.workspaces.all_windows() {
                         window.set_activated(false);
-                        window.toplevel().unwrap().send_configure();
+                        if let Some(tl) = window.toplevel() {
+                            tl.send_configure();
+                        }
+                        #[cfg(feature = "xwayland")]
+                        if let Some(xs) = window.x11_surface() {
+                            xs.configure(None).unwrap();
+                        }
                     }
                 }
                 FocusTarget::Popup(_) => {}
