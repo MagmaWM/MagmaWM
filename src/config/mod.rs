@@ -51,19 +51,25 @@ impl OutputConfig {
     }
 }
 
-pub fn generate_config() -> PathBuf {
+/// Generates a default config file `config.ron` in the `$XDG_CONFIG_HOME/magmawm` directory.
+///
+/// # Panics
+/// - Panics if unable to determine the XDG home directory.
+/// - Panics if unable to create the `$XDG_CONFIG_HOME/magmawm` directory.
+/// - Panics if unable to create or write to the config file.
+/// - Panics if unable to serialize the default config.
+///
+/// # Returns
+/// The path of the generated config file
+fn generate_config() -> PathBuf {
     warn!("No config file found, generating one");
-    let xdg = xdg::BaseDirectories::new().expect("Couldnt get xdg basedirs");
-    let file_path = xdg
+    let xdg = xdg::BaseDirectories::new()
+        .unwrap_or_else(|e| panic!("Unable to get XDG base directories: {e}"));
+    let config_path = xdg
         .place_config_file("magmawm/config.ron")
-        .expect("Failed to get file path");
-    let mut file = match File::create(file_path.clone()) {
-        Ok(file) => file,
-        Err(err) => {
-            println!("Failed to create file: {}", err);
-            panic!("Couldnt create config file")
-        }
-    };
+        .unwrap_or_else(|e| panic!("Unable to create config directory: {e}"));
+    let mut config_file =
+        File::create(&config_path).unwrap_or_else(|e| panic!("Unable to create config file: {e}"));
 
     let mut keybinding_map = indexmap::IndexMap::<KeyPattern, Action>::new();
     keybinding_map.insert(
@@ -126,12 +132,28 @@ pub fn generate_config() -> PathBuf {
         borders: default_borders(),
     };
     let pretty = PrettyConfig::new().compact_arrays(true).depth_limit(2);
-    let ron = ron::ser::to_string_pretty(&default_config, pretty).unwrap();
-    file.write_all(ron.as_bytes())
-        .expect("ERROR: Couldnt write to file");
-    file_path
+    let ron = ron::ser::to_string_pretty(&default_config, pretty)
+        .unwrap_or_else(|e| panic!("Unable to serialize config: {e}"));
+    config_file
+        .write_all(ron.as_bytes())
+        .unwrap_or_else(|e| panic!("Unable to write to config file: {e}"));
+    config_path
 }
 
+/// Loads a config file if one exists, otherwise generates a default config.
+///
+/// The default config file is generated in the `$XDG_CONFIG_HOME/magmawm` directory.
+///
+/// # Panics
+/// - Panics if unable to open or read any of the potential config files.
+/// - Panics if the loaded config file is malformed.
+/// - Panics if unable to determine the XDG home directory.
+/// - Panics if unable to create the `$XDG_CONFIG_HOME/magmawm` directory.
+/// - Panics if unable to create or write to the default config file.
+/// - Panics if unable to serialize the default config.
+///
+/// # Returns
+/// The config parsed from the loaded or generated config file
 pub fn load_config() -> Config {
     let xdg = xdg::BaseDirectories::new().ok();
     let locations = if let Some(base) = xdg {
@@ -143,22 +165,29 @@ pub fn load_config() -> Config {
         vec![]
     };
 
+    // TODO: Don't panic unless unable to read ANY config file
     for path in locations {
         info!("Trying config location: {}", path.display());
         if path.exists() {
             info!("Using config at {}", path.display());
-            return ron::de::from_reader(OpenOptions::new().read(true).open(path).unwrap())
-                .expect("Malformed config file");
+            return ron::de::from_reader(
+                OpenOptions::new()
+                    .read(true)
+                    .open(&path)
+                    .unwrap_or_else(|e| panic!("Unable to open file '{}': {e}", path.display())),
+            )
+            .unwrap_or_else(|e| panic!("Malformed config file: {e}"));
         }
     }
     info!("No config file found in default locations, prompting generation");
-    return ron::de::from_reader(
+    let config = generate_config();
+    ron::de::from_reader(
         OpenOptions::new()
             .read(true)
-            .open(generate_config())
-            .unwrap(),
+            .open(&config)
+            .unwrap_or_else(|e| panic!("Unable to open file '{}': {e}", config.display())),
     )
-    .unwrap();
+    .unwrap_or_else(|e| panic!("Malformed config file: {e}"))
 }
 
 fn default_gaps() -> (i32, i32) {
