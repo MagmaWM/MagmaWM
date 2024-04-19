@@ -53,7 +53,10 @@ impl<BackendData: Backend> XdgShellHandler for MagmaState<BackendData> {
         let window = self
             .workspaces
             .all_windows()
-            .find(|w| w.toplevel().unwrap() == &surface)
+            .find(|w| match w.toplevel() {
+                Some(tl) => tl == &surface,
+                None => false,
+            })
             .unwrap()
             .clone();
 
