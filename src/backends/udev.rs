@@ -69,7 +69,7 @@ use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::{
         process,
-        render::{border::BorderShader, CustomRenderElements},
+        render::{border::BorderShader, init_shaders, CustomRenderElements},
     },
 };
 
@@ -624,7 +624,7 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-                BorderShader::init(renderer.as_mut());
+                init_shaders(renderer.as_mut());
                 let surface = Surface {
                     _device_id: node,
                     _render_node: device.render_node,
