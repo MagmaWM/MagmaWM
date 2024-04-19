@@ -316,21 +316,27 @@ impl<'a> RenderElement<GlMultiRenderer<'a>> for WindowRenderElement<GlMultiRende
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
     ) -> Result<(), <GlMultiRenderer<'a> as Renderer>::Error> {
-        let size = self
-            .geometry(Scale::from(1.0))
-            .size
-            .to_logical(Scale::from(1));
-        let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut());
-        framegl.override_default_tex_program(
-            CornerShader::get(framegl.egl_context()),
-            vec![
-                Uniform::new("size", [size.w as f32, size.h as f32]),
-                Uniform::new("radius", CONFIG.borders.radius),
-            ],
-        );
-        self.inner.draw(frame, src, dst, damage)?;
-        <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
-            .clear_tex_program_override();
+        // apply shader to round corners (tty)
+        if CONFIG.borders.radius > 0.0 {
+            let size = self
+                .geometry(Scale::from(1.0))
+                .size
+                .to_logical(Scale::from(1));
+            let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut());
+            framegl.override_default_tex_program(
+                CornerShader::get(framegl.egl_context()),
+                vec![
+                    Uniform::new("size", [size.w as f32, size.h as f32]),
+                    Uniform::new("radius", CONFIG.borders.radius),
+                ],
+            );
+            self.inner.draw(frame, src, dst, damage)?;
+            <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame.as_mut())
+                .clear_tex_program_override();
+        } else {
+            self.inner.draw(frame, src, dst, damage)?;
+        }
+
         Ok(())
     }
 
@@ -350,20 +356,25 @@ impl RenderElement<GlowRenderer> for WindowRenderElement<GlowRenderer> {
         dst: Rectangle<i32, Physical>,
         damage: &[Rectangle<i32, Physical>],
     ) -> Result<(), <GlowRenderer as Renderer>::Error> {
-        let size = self
-            .geometry(Scale::from(1.0))
-            .size
-            .to_logical(Scale::from(1));
-        let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame);
-        framegl.override_default_tex_program(
-            CornerShader::get(framegl.egl_context()),
-            vec![
-                Uniform::new("size", [size.w as f32, size.h as f32]),
-                Uniform::new("radius", CONFIG.borders.radius),
-            ],
-        );
-        self.inner.draw(frame, src, dst, damage)?;
-        <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
+        // apply shader to round corners (winit)
+        if CONFIG.borders.radius > 0.0 {
+            let size = self
+                .geometry(Scale::from(1.0))
+                .size
+                .to_logical(Scale::from(1));
+            let framegl = <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame);
+            framegl.override_default_tex_program(
+                CornerShader::get(framegl.egl_context()),
+                vec![
+                    Uniform::new("size", [size.w as f32, size.h as f32]),
+                    Uniform::new("radius", CONFIG.borders.radius),
+                ],
+            );
+            self.inner.draw(frame, src, dst, damage)?;
+            <GlowFrame<'_> as BorrowMut<GlesFrame>>::borrow_mut(frame).clear_tex_program_override();
+        } else {
+            self.inner.draw(frame, src, dst, damage)?;
+        }
         Ok(())
     }
 
@@ -384,6 +395,7 @@ where
     }
 }
 
+// wraps the parent surface of a window in a window element for rendering
 pub fn wrap_window_surface<
     R: Renderer + ImportAll + AsGlowRenderer,
     C: From<WaylandSurfaceRenderElement<R>> + From<WindowRenderElement<R>>,

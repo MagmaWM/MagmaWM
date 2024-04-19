@@ -110,6 +110,7 @@ impl Workspace {
                     element.borrow().rec.loc,
                 )));
             }
+            //wrap and add window surfaces
             render_elements.append(&mut wrap_window_surface(window.render_elements(
                 renderer,
                 element.borrow().render_location().to_physical(1),
