@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use smithay::{
-    desktop::Window,
+    desktop::{Window, WindowSurface},
     reexports::{calloop::LoopHandle, wayland_server::DisplayHandle, x11rb},
     utils::{Logical, Rectangle},
     xwayland::{
@@ -9,7 +9,7 @@ use smithay::{
         X11Surface, X11Wm, XWayland, XWaylandEvent, XWaylandSource, XwmHandler,
     },
 };
-use tracing::{debug, error, info};
+use tracing::{debug, error, info, warn};
 
 use crate::{
     state::{Backend, MagmaState},
@@ -120,15 +120,19 @@ impl<BackendData: Backend> XwmHandler for MagmaState<BackendData> {
     }
 
     fn unmapped_window(&mut self, _xwm: XwmId, window: X11Surface) {
-        let workspaces = self.workspaces.iter().collect::<Vec<_>>();
-        let elem = Window::new_x11_window(window.clone());
-        for workspace in workspaces {
-            if workspace.contains_window(&elem) {
-                workspace.remove_window(&elem);
+        for workspace in self.workspaces.iter() {
+            for win in workspace.clone().windows() {
+                if let WindowSurface::X11(x) = win.underlying_surface() {
+                    if *x == window {
+                        workspace.remove_window(&win);
+                        window.set_mapped(false).unwrap();
+                        debug!("Unmapped x11 window");
+                        return;
+                    }
+                }
             }
         }
-        window.set_mapped(false).unwrap();
-        debug!("Unmapped x11 window");
+        warn!("Failed to unmap x11 window");
     }
 
     fn destroyed_window(&mut self, _xwm: XwmId, _window: X11Surface) {

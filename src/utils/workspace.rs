@@ -38,6 +38,8 @@ impl MagmaWindow {
         self.rec.loc - self.window.geometry().loc
     }
 }
+
+#[derive(Debug, Clone)]
 pub struct Workspace {
     windows: Vec<Rc<RefCell<MagmaWindow>>>,
     outputs: Vec<Output>,
@@ -184,6 +186,7 @@ impl Default for Workspace {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Workspaces {
     workspaces: Vec<Workspace>,
     pub current: u8,
