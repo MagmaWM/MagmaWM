@@ -11,6 +11,7 @@ pub use smithay::{
     utils::{IsAlive, Serial},
     wayland::seat::WaylandFocus,
 };
+use tracing::debug;
 
 use crate::state::{Backend, MagmaState};
 
@@ -45,9 +46,16 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         event: &MotionEvent,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::enter(&w.wl_surface().unwrap(), seat, data, event)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    PointerTarget::enter(w.wl_surface(), seat, data, event)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::enter(&w, seat, data, event),
+                    None => debug!("Pointer entered non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => PointerTarget::enter(l.wl_surface(), seat, data, event),
             FocusTarget::Popup(p) => PointerTarget::enter(p.wl_surface(), seat, data, event),
         }
@@ -59,9 +67,16 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         event: &MotionEvent,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::motion(&w.wl_surface().unwrap(), seat, data, event)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    PointerTarget::motion(w.wl_surface(), seat, data, event)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::motion(&w, seat, data, event),
+                    None => debug!("Pointer motion on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 PointerTarget::motion(l.wl_surface(), seat, data, event)
             }
@@ -75,9 +90,16 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         event: &RelativeMotionEvent,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::relative_motion(&w.wl_surface().unwrap(), seat, data, event)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    PointerTarget::relative_motion(w.wl_surface(), seat, data, event)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::relative_motion(&w, seat, data, event),
+                    None => debug!("Relative pointer movement on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 PointerTarget::relative_motion(l.wl_surface(), seat, data, event)
             }
@@ -93,9 +115,16 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         event: &ButtonEvent,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::button(&w.wl_surface().unwrap(), seat, data, event)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    PointerTarget::button(w.wl_surface(), seat, data, event)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::button(&w, seat, data, event),
+                    None => debug!("Button press on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 PointerTarget::button(l.wl_surface(), seat, data, event)
             }
@@ -109,9 +138,14 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         frame: AxisFrame,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::axis(&w.wl_surface().unwrap(), seat, data, frame)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => PointerTarget::axis(w.wl_surface(), seat, data, frame),
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::axis(&w, seat, data, frame),
+                    None => debug!("Scroll on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => PointerTarget::axis(l.wl_surface(), seat, data, frame),
             FocusTarget::Popup(p) => PointerTarget::axis(p.wl_surface(), seat, data, frame),
         }
@@ -124,9 +158,16 @@ impl<BackendData: Backend> PointerTarget<MagmaState<BackendData>> for FocusTarge
         time: u32,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                PointerTarget::leave(&w.wl_surface().unwrap(), seat, data, serial, time)
-            }
+            FocusTarget::Window(w) => match w.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    PointerTarget::leave(w.wl_surface(), seat, data, serial, time)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(w) => PointerTarget::leave(&w, seat, data, serial, time),
+                    None => debug!("Attempted un-focus on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 PointerTarget::leave(l.wl_surface(), seat, data, serial, time)
             }
@@ -220,10 +261,16 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
         serial: Serial,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                let WindowSurface::Wayland(w) = w.underlying_surface();
-                KeyboardTarget::enter(w.wl_surface(), seat, data, keys, serial)
-            }
+            FocusTarget::Window(win) => match win.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    KeyboardTarget::enter(w.wl_surface(), seat, data, keys, serial)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(s) => KeyboardTarget::enter(&s, seat, data, keys, serial),
+                    None => debug!("Attempted to keyboard focus non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 KeyboardTarget::enter(l.wl_surface(), seat, data, keys, serial)
             }
@@ -239,10 +286,16 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
         serial: Serial,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                let WindowSurface::Wayland(w) = w.underlying_surface();
-                KeyboardTarget::leave(w.wl_surface(), seat, data, serial)
-            }
+            FocusTarget::Window(win) => match win.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    KeyboardTarget::leave(w.wl_surface(), seat, data, serial)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(s) => KeyboardTarget::leave(&s, seat, data, serial),
+                    None => debug!("Attempted to keyboard un-focus non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 KeyboardTarget::leave(l.wl_surface(), seat, data, serial)
             }
@@ -259,10 +312,16 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
         time: u32,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                let WindowSurface::Wayland(w) = w.underlying_surface();
-                KeyboardTarget::key(w.wl_surface(), seat, data, key, state, serial, time)
-            }
+            FocusTarget::Window(win) => match win.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    KeyboardTarget::key(w.wl_surface(), seat, data, key, state, serial, time)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(s) => KeyboardTarget::key(&s, seat, data, key, state, serial, time),
+                    None => debug!("Ignored keypress on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 KeyboardTarget::key(l.wl_surface(), seat, data, key, state, serial, time)
             }
@@ -279,10 +338,16 @@ impl<BackendData: Backend> KeyboardTarget<MagmaState<BackendData>> for FocusTarg
         serial: Serial,
     ) {
         match self {
-            FocusTarget::Window(w) => {
-                let WindowSurface::Wayland(w) = w.underlying_surface();
-                KeyboardTarget::modifiers(w.wl_surface(), seat, data, modifiers, serial)
-            }
+            FocusTarget::Window(win) => match win.underlying_surface() {
+                WindowSurface::Wayland(w) => {
+                    KeyboardTarget::modifiers(w.wl_surface(), seat, data, modifiers, serial)
+                }
+                #[cfg(feature = "xwayland")]
+                WindowSurface::X11(x) => match x.wl_surface() {
+                    Some(s) => KeyboardTarget::modifiers(&s, seat, data, modifiers, serial),
+                    None => debug!("Ignored modifier keypress on non-visible xwayland window"),
+                },
+            },
             FocusTarget::LayerSurface(l) => {
                 KeyboardTarget::modifiers(l.wl_surface(), seat, data, modifiers, serial)
             }

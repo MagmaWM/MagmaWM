@@ -34,6 +34,9 @@ use smithay::{
     },
 };
 
+#[cfg(feature = "xwayland")]
+use smithay::xwayland::XWaylandClientData;
+
 use crate::{
     state::{Backend, ClientState, MagmaState},
     utils::{focus::FocusTarget, tiling::bsp_update_layout},
@@ -48,7 +51,14 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
     }
 
     fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
-        &client.get_data::<ClientState>().unwrap().compositor_state
+        #[cfg(feature = "xwayland")]
+        if let Some(data) = &client.get_data::<XWaylandClientData>() {
+            return &data.compositor_state;
+        }
+        if let Some(data) = &client.get_data::<ClientState>() {
+            return &data.compositor_state;
+        }
+        panic!("No client data");
     }
 
     fn commit(&mut self, surface: &WlSurface) {
@@ -58,11 +68,13 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
             while let Some(parent) = get_parent(&root) {
                 root = parent;
             }
-            if let Some(window) = self
-                .workspaces
-                .all_windows()
-                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
-            {
+            if let Some(window) = self.workspaces.all_windows().find(|w| match w.toplevel() {
+                Some(tl) => tl.wl_surface() == &root,
+                None => match w.wl_surface() {
+                    Some(s) => s == root,
+                    None => false,
+                },
+            }) {
                 window.on_commit();
             }
         };
@@ -122,7 +134,14 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
                         } else {
                             window.set_activated(false);
                         }
-                        window.toplevel().unwrap().send_configure();
+                        if let Some(tl) = window.toplevel() {
+                            tl.send_configure();
+                            continue;
+                        }
+                        #[cfg(feature = "xwayland")]
+                        if let Some(xs) = window.x11_surface() {
+                            xs.configure(None).unwrap();
+                        }
                     }
                 }
                 FocusTarget::LayerSurface(_) => {

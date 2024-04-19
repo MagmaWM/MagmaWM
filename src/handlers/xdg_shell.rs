@@ -90,28 +90,39 @@ delegate_xdg_shell!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 // Should be called on `WlSurface::commit`
 pub fn handle_commit(workspaces: &Workspaces, surface: &WlSurface, popup_manager: &PopupManager) {
-    if let Some(window) = workspaces
-        .all_windows()
-        .find(|w| w.toplevel().unwrap().wl_surface() == surface)
-    {
+    if let Some(window) = workspaces.all_windows().find(|w| match w.toplevel() {
+        Some(tl) => tl.wl_surface() == surface,
+        #[cfg(feature = "xwayland")]
+        None => match w.x11_surface() {
+            Some(xs) => match xs.wl_surface() {
+                Some(s) => &s == surface,
+                None => false,
+            },
+            None => false,
+        },
+        #[cfg(not(feature = "xwayland"))]
+        None => false,
+    }) {
         let initial_configure_sent = with_states(surface, |states| {
-            states
+            match states
                 .data_map
                 .get::<Mutex<XdgToplevelSurfaceRoleAttributes>>()
-                .unwrap()
-                .lock()
-                .unwrap()
-                .initial_configure_sent
+            {
+                Some(attrs) => attrs.lock().unwrap().initial_configure_sent,
+                None => false,
+            }
         });
         if !initial_configure_sent {
             let toplevel = window.toplevel();
-            toplevel.unwrap().with_pending_state(|state| {
-                state.states.set(ToplevelState::TiledLeft);
-                state.states.set(ToplevelState::TiledRight);
-                state.states.set(ToplevelState::TiledTop);
-                state.states.set(ToplevelState::TiledBottom);
-            });
-            toplevel.unwrap().send_configure();
+            if toplevel.is_some() {
+                toplevel.unwrap().with_pending_state(|state| {
+                    state.states.set(ToplevelState::TiledLeft);
+                    state.states.set(ToplevelState::TiledRight);
+                    state.states.set(ToplevelState::TiledTop);
+                    state.states.set(ToplevelState::TiledBottom);
+                });
+                toplevel.unwrap().send_configure();
+            }
         }
     }
 

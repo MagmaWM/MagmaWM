@@ -17,6 +17,8 @@ mod handlers;
 mod protocols;
 mod state;
 mod utils;
+#[cfg(feature = "xwayland")]
+mod xwayland;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

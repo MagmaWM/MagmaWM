@@ -182,6 +182,9 @@ pub fn init_winit() {
 
     std::env::set_var("WAYLAND_DISPLAY", &state.socket_name);
 
+    #[cfg(feature = "xwayland")]
+    state.xwayland_state.start(event_loop.handle());
+
     let mut full_redraw = 0u8;
 
     let timer = Timer::immediate();

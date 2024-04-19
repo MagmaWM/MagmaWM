@@ -2,9 +2,7 @@ use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use once_cell::sync::Lazy;
 use smithay::{
-    desktop::{
-        layer_map_for_output, {PopupManager, Window},
-    },
+    desktop::{layer_map_for_output, PopupManager, Window},
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -29,6 +27,8 @@ use smithay::{
 use tracing::warn;
 
 use crate::utils::{focus::FocusTarget, workspace::Workspaces};
+#[cfg(feature = "xwayland")]
+use crate::xwayland::XWaylandState;
 use crate::{
     config::{load_config, Config},
     debug::MagmaDebug,
@@ -63,6 +63,8 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub seat_state: SeatState<MagmaState<BackendData>>,
     pub layer_shell_state: WlrLayerShellState,
     pub popup_manager: PopupManager,
+    #[cfg(feature = "xwayland")]
+    pub xwayland_state: XWaylandState,
 
     pub seat: Seat<Self>,
     pub seat_name: String,
@@ -146,6 +148,19 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             )
             .expect("Failed to init wayland server source");
 
+        #[cfg(feature = "xwayland")]
+        let (xwayland_state, xwayland_source) = XWaylandState::new(&dh);
+        #[cfg(feature = "xwayland")]
+        loop_handle
+            .insert_source(xwayland_source, |event, _, state| {
+                state.state.xwayland_state.on_event(
+                    event,
+                    state.state.loop_handle.clone(),
+                    &mut state.display_handle,
+                );
+            })
+            .unwrap();
+
         Self {
             loop_handle,
             dh,
@@ -164,6 +179,8 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             data_device_state,
             primary_selection_state,
             layer_shell_state,
+            #[cfg(feature = "xwayland")]
+            xwayland_state,
             seat,
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),

@@ -42,8 +42,9 @@ git = "https://github.com/Smithay/smithay-egui.git"
 optional = true
 
 [features]
-default = ["debug"]
+default = ["debug", "xwayland"]
 debug = ["egui", "egui_plot", "smithay-egui"]
+xwayland = ["smithay/xwayland"]
 
 [patch."https://github.com/Smithay/smithay.git"]
 smithay = { git = "https://github.com/smithay//smithay" }

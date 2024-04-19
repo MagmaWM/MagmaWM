@@ -309,6 +309,9 @@ pub fn init_udev() {
     );
     state.backend_data.dmabuf_state = Some((dmabuf_state, global));
 
+    #[cfg(feature = "xwayland")]
+    state.xwayland_state.start(event_loop.handle());
+
     let mut calloopdata = CalloopData {
         state,
         display_handle,
