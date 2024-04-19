@@ -1,10 +1,5 @@
 use chrono::Local;
-use std::{
-    fs,
-    fs::File,
-    os,
-    path::{Path, PathBuf},
-};
+use std::{fs, fs::File, os, path::PathBuf};
 use tracing_subscriber::{
     filter::{EnvFilter, LevelFilter},
     layer::SubscriberExt,
@@ -16,11 +11,11 @@ const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::INFO;
 
 /// Initialize logging for the application.
 ///
-/// Log files are in `~/.local/share/MagmaWM`
+/// * Creates log dir `~/.local/share/MagmaWM` if it does not exist
 /// * Creates a timestamped log file: `magma_YYYY-MM-DD_HH:MM:SS.log`.
-/// * Symlinks `latest.log` to the latest timestamped log file.
-///
-/// Logs are also printed to `stderr`.
+/// * Symlinks `latest.log` to the new timestamped log file.
+/// * Initializes logging to the timestamped log file (no color).
+/// * Initializes logging to stderr (with color).
 ///
 /// Log levels are set by the following, in order of precedence:
 /// * `log_level`
@@ -36,19 +31,42 @@ const DEFAULT_LOG_LEVEL: LevelFilter = LevelFilter::INFO;
 pub fn init_logs<S: AsRef<str>>(log_level: Option<S>) {
     let home_dir = std::env::var("HOME").expect("$HOME is not set");
     let log_dir = PathBuf::from(home_dir).join(".local/share/MagmaWM/");
-
     let log_file_name = format!("magma_{}.log", Local::now().format("%Y-%m-%d_%H:%M:%S"));
     let log_file_path = log_dir.join(log_file_name);
     let log_link_path = log_dir.join("latest.log");
 
-    // create a new log file and symlink latest.log to it
-    let log_file = File::create(&log_file_path).expect("Unable to create log file");
+    // create the log dir if it doesn't exist
+    fs::create_dir_all(&log_dir).unwrap_or_else(|e| {
+        panic!(
+            "Unable to create log directory '{}': {e}",
+            log_dir.to_string_lossy()
+        )
+    });
+
+    // create a new log file
+    let log_file = File::create(&log_file_path).unwrap_or_else(|e| {
+        panic!(
+            "Unable to create log file '{}': {e}",
+            log_file_path.to_string_lossy()
+        )
+    });
+
     // delete latest.log if it already exists
-    if Path::new(&log_link_path).exists() {
-        fs::remove_file(&log_link_path)
-            .unwrap_or_else(|_| panic!("Unable to remove {}", log_link_path.to_string_lossy()));
+    if log_link_path.exists() {
+        fs::remove_file(&log_link_path).unwrap_or_else(|e| {
+            panic!(
+                "Unable to remove '{}': {e}",
+                log_link_path.to_string_lossy()
+            )
+        });
     }
-    os::unix::fs::symlink(&log_file_path, log_link_path).expect("Unable to symlink log file");
+    // symlink latest.log to the new log file
+    os::unix::fs::symlink(&log_file_path, &log_link_path).unwrap_or_else(|e| {
+        panic!(
+            "Unable to symlink '{}': {e}",
+            log_link_path.to_string_lossy()
+        )
+    });
 
     let file_layer = tracing_subscriber::fmt::layer()
         .with_ansi(false)
