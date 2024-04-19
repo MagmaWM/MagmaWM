@@ -61,7 +61,7 @@ use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
     edid::EdidInfo,
 };
-use tracing::{error, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{
     delegate_screencopy_manager,
@@ -477,6 +477,7 @@ impl MagmaState<UdevData> {
                 surface.compositor.frame_submitted().ok();
                 #[cfg(feature = "debug")]
                 self.debug.fps.displayed();
+                debug!("VBlank event on {:?}", crtc);
                 self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
@@ -861,7 +862,7 @@ impl MagmaState<UdevData> {
         }
 
         let mut result = match frame_result {
-            Ok(frame_result) => Ok(frame_result.is_empty),
+            Ok(frame_result) => Ok(!frame_result.is_empty),
             Err(frame_result) => Err(frame_result),
         };
 
