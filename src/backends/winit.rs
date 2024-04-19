@@ -18,7 +18,7 @@ use smithay::{
             timer::{TimeoutAction, Timer},
             EventLoop,
         },
-        wayland_server::{Display, DisplayHandle},
+        wayland_server::Display,
         winit::platform::pump_events::PumpStatus,
     },
     utils::{Rectangle, Scale, Transform},
@@ -72,12 +72,12 @@ impl Backend for WinitData {
     }
 }
 use crate::{
-    state::{Backend, CalloopData, MagmaState, CONFIG},
+    state::{Backend, MagmaState, CONFIG},
     utils::render::{border::BorderShader, init_shaders, CustomRenderElements},
 };
 
 pub fn init_winit() {
-    let mut event_loop: EventLoop<CalloopData<WinitData>> = EventLoop::try_new().unwrap();
+    let mut event_loop: EventLoop<MagmaState<WinitData>> = EventLoop::try_new().unwrap();
 
     let display: Display<MagmaState<WinitData>> = Display::new().unwrap();
 
@@ -160,20 +160,13 @@ pub fn init_winit() {
         damage_tracker: damage_tracked_renderer,
         dmabuf_state,
     };
-    let display_handle: DisplayHandle = display.handle().clone();
-    let state = MagmaState::new(
+    let mut state = MagmaState::new(
         event_loop.handle(),
         event_loop.get_signal(),
         display,
         winitdata,
     );
 
-    let mut data = CalloopData {
-        display_handle,
-        state,
-    };
-
-    let state = &mut data.state;
     init_shaders(state.backend_data.backend.renderer());
     // map output to every workspace
     for workspace in state.workspaces.iter() {
@@ -202,7 +195,7 @@ pub fn init_winit() {
     }
 
     event_loop
-        .run(None, &mut data, move |_| {
+        .run(None, &mut state, move |_| {
             // Magma is running
         })
         .unwrap();
@@ -210,12 +203,10 @@ pub fn init_winit() {
 
 pub fn winit_dispatch(
     winit: &mut WinitEventLoop,
-    data: &mut CalloopData<WinitData>,
+    state: &mut MagmaState<WinitData>,
     output: &Output,
     full_redraw: &mut u8,
 ) {
-    let state = &mut data.state;
-
     let res = winit.dispatch_new_events(|event| match event {
         WinitEvent::Resized { size, .. } => {
             output.change_current_state(
@@ -343,7 +334,7 @@ pub fn winit_dispatch(
     });
 
     workspace.windows().for_each(|e| e.refresh());
-    data.display_handle.flush_clients().unwrap();
+    state.dh.flush_clients().unwrap();
     state.popup_manager.cleanup();
     BorderShader::cleanup(winitdata.backend.renderer());
 }

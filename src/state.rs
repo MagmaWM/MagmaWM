@@ -34,11 +34,6 @@ use crate::{
     debug::MagmaDebug,
 };
 
-pub struct CalloopData<BackendData: Backend + 'static> {
-    pub state: MagmaState<BackendData>,
-    pub display_handle: DisplayHandle,
-}
-
 pub trait Backend {
     fn seat_name(&self) -> String;
 }
@@ -49,7 +44,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,
     pub backend_data: BackendData,
     pub start_time: Instant,
-    pub loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
+    pub loop_handle: LoopHandle<'static, Self>,
     pub loop_signal: LoopSignal,
 
     // protocol state
@@ -79,7 +74,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
 
 impl<BackendData: Backend + 'static> MagmaState<BackendData> {
     pub fn new(
-        loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
+        loop_handle: LoopHandle<'static, Self>,
         loop_signal: LoopSignal,
         display: Display<MagmaState<BackendData>>,
         backend_data: BackendData,
@@ -126,7 +121,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
                 //
                 // You may also associate some data with the client when inserting the client.
                 state
-                    .display_handle
+                    .dh
                     .insert_client(client_stream, Arc::new(ClientState::default()))
                     .unwrap();
             })
@@ -137,12 +132,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             .insert_source(
                 Generic::new(display, Interest::READ, Mode::Level),
                 |_, display, state| {
-                    unsafe {
-                        display
-                            .get_mut()
-                            .dispatch_clients(&mut state.state)
-                            .unwrap()
-                    };
+                    unsafe { display.get_mut().dispatch_clients(state).unwrap() };
                     Ok(PostAction::Continue)
                 },
             )
@@ -153,11 +143,9 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
         #[cfg(feature = "xwayland")]
         loop_handle
             .insert_source(xwayland_source, |event, _, state| {
-                state.state.xwayland_state.on_event(
-                    event,
-                    state.state.loop_handle.clone(),
-                    &mut state.display_handle,
-                );
+                state
+                    .xwayland_state
+                    .on_event(event, state.loop_handle.clone(), &mut state.dh);
             })
             .unwrap();
 

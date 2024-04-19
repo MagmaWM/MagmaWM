@@ -1,4 +1,3 @@
-#![cfg(feature = "xwayland")]
 use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use smithay::{
@@ -10,11 +9,10 @@ use smithay::{
         X11Surface, X11Wm, XWayland, XWaylandEvent, XWaylandSource, XwmHandler,
     },
 };
-#[cfg(feature = "xwayland")]
 use tracing::{debug, error, info};
 
 use crate::{
-    state::{Backend, CalloopData, MagmaState},
+    state::{Backend, MagmaState},
     utils::workspace::MagmaWindow,
 };
 
@@ -41,7 +39,7 @@ impl XWaylandState {
     }
 
     /// Start the xwayland server
-    pub fn start(&mut self, loop_handle: LoopHandle<CalloopData<impl Backend>>) {
+    pub fn start(&mut self, loop_handle: LoopHandle<MagmaState<impl Backend>>) {
         let env: HashMap<String, String> = HashMap::new();
 
         self.xdisplay = Some(
@@ -54,7 +52,7 @@ impl XWaylandState {
     pub fn on_event<BackendData: Backend>(
         &mut self,
         event: XWaylandEvent,
-        loop_handle: LoopHandle<'static, CalloopData<BackendData>>,
+        loop_handle: LoopHandle<'static, MagmaState<BackendData>>,
         display_handle: &mut DisplayHandle,
     ) {
         match event {
@@ -86,136 +84,6 @@ impl XWaylandState {
                 self.xdisplay = None;
             }
         }
-    }
-}
-
-impl<BackendData: Backend> XwmHandler for CalloopData<BackendData> {
-    fn xwm_state(&mut self, xwm: XwmId) -> &mut X11Wm {
-        XwmHandler::xwm_state(&mut self.state, xwm)
-    }
-
-    fn new_window(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::new_window(&mut self.state, xwm, window)
-    }
-
-    fn new_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::new_override_redirect_window(&mut self.state, xwm, window)
-    }
-
-    fn map_window_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::map_window_request(&mut self.state, xwm, window)
-    }
-
-    fn mapped_override_redirect_window(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::mapped_override_redirect_window(&mut self.state, xwm, window)
-    }
-
-    fn unmapped_window(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::unmapped_window(&mut self.state, xwm, window)
-    }
-
-    fn destroyed_window(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::destroyed_window(&mut self.state, xwm, window)
-    }
-
-    fn configure_request(
-        &mut self,
-        xwm: XwmId,
-        window: X11Surface,
-        x: Option<i32>,
-        y: Option<i32>,
-        w: Option<u32>,
-        h: Option<u32>,
-        reorder: Option<Reorder>,
-    ) {
-        XwmHandler::configure_request(&mut self.state, xwm, window, x, y, w, h, reorder)
-    }
-
-    fn configure_notify(
-        &mut self,
-        xwm: XwmId,
-        window: X11Surface,
-        geometry: Rectangle<i32, Logical>,
-        above: Option<x11rb::protocol::xproto::Window>,
-    ) {
-        XwmHandler::configure_notify(&mut self.state, xwm, window, geometry, above)
-    }
-
-    fn resize_request(
-        &mut self,
-        xwm: XwmId,
-        window: X11Surface,
-        button: u32,
-        resize_edge: ResizeEdge,
-    ) {
-        XwmHandler::resize_request(&mut self.state, xwm, window, button, resize_edge)
-    }
-
-    fn move_request(&mut self, xwm: XwmId, window: X11Surface, button: u32) {
-        XwmHandler::move_request(&mut self.state, xwm, window, button)
-    }
-
-    fn map_window_notify(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::map_window_notify(&mut self.state, xwm, window)
-    }
-
-    fn maximize_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::maximize_request(&mut self.state, xwm, window)
-    }
-
-    fn unmaximize_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::unmaximize_request(&mut self.state, xwm, window)
-    }
-
-    fn fullscreen_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::fullscreen_request(&mut self.state, xwm, window)
-    }
-
-    fn unfullscreen_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::unfullscreen_request(&mut self.state, xwm, window)
-    }
-
-    fn minimize_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::minimize_request(&mut self.state, xwm, window)
-    }
-
-    fn unminimize_request(&mut self, xwm: XwmId, window: X11Surface) {
-        XwmHandler::unminimize_request(&mut self.state, xwm, window)
-    }
-
-    fn allow_selection_access(
-        &mut self,
-        xwm: XwmId,
-        selection: smithay::wayland::selection::SelectionTarget,
-    ) -> bool {
-        XwmHandler::allow_selection_access(&mut self.state, xwm, selection)
-    }
-
-    fn send_selection(
-        &mut self,
-        xwm: XwmId,
-        selection: smithay::wayland::selection::SelectionTarget,
-        mime_type: String,
-        fd: std::os::unix::prelude::OwnedFd,
-    ) {
-        XwmHandler::send_selection(&mut self.state, xwm, selection, mime_type, fd)
-    }
-
-    fn new_selection(
-        &mut self,
-        xwm: XwmId,
-        selection: smithay::wayland::selection::SelectionTarget,
-        mime_types: Vec<String>,
-    ) {
-        XwmHandler::new_selection(&mut self.state, xwm, selection, mime_types)
-    }
-
-    fn cleared_selection(
-        &mut self,
-        xwm: XwmId,
-        selection: smithay::wayland::selection::SelectionTarget,
-    ) {
-        XwmHandler::cleared_selection(&mut self.state, xwm, selection)
     }
 }
 
