@@ -9,11 +9,11 @@ use smithay::{
         },
         glow::GlowRenderer,
     },
-    desktop::space::SpaceElement,
+    desktop::Window,
     utils::{IsAlive, Logical, Point, Rectangle, Size},
 };
 
-use crate::{state::CONFIG, utils::workspace::WindowElement};
+use crate::state::CONFIG;
 
 const ROUNDED_BORDER_FRAG: &str = include_str!("shaders/rounded_borders.frag");
 const BORDER_FRAG: &str = include_str!("shaders/borders.frag");
@@ -22,7 +22,7 @@ pub struct BorderShader {
     default: GlesPixelProgram,
 }
 
-struct BorderShaderElements(RefCell<HashMap<WindowElement, PixelShaderElement>>);
+struct BorderShaderElements(RefCell<HashMap<Window, PixelShaderElement>>);
 
 impl BorderShader {
     pub fn init(renderer: &mut GlowRenderer) {
@@ -70,7 +70,7 @@ impl BorderShader {
     }
     pub fn element(
         renderer: &mut GlowRenderer,
-        window: &WindowElement,
+        window: &Window,
         loc: Point<i32, Logical>,
     ) -> PixelShaderElement {
         let thickness: f32 = CONFIG.borders.thickness as f32;

@@ -1,7 +1,8 @@
+use smithay::desktop::Window;
 use std::fmt::Debug;
 use std::{cell::RefCell, rc::Rc};
 
-use super::workspace::{MagmaWindow, WindowElement};
+use super::workspace::MagmaWindow;
 
 #[derive(Clone)]
 pub enum BinaryTree {
@@ -76,7 +77,7 @@ impl BinaryTree {
         }
     }
 
-    pub fn remove(&mut self, window: &WindowElement) {
+    pub fn remove(&mut self, window: &Window) {
         match self {
             BinaryTree::Empty => {}
             BinaryTree::Window(w) => {

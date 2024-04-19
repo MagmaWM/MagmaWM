@@ -2,7 +2,9 @@ use std::{ffi::OsString, sync::Arc, time::Instant};
 
 use once_cell::sync::Lazy;
 use smithay::{
-    desktop::{layer_map_for_output, PopupManager},
+    desktop::{
+        layer_map_for_output, {PopupManager, Window},
+    },
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
         calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
@@ -23,14 +25,10 @@ use smithay::{
         shm::ShmState,
         socket::ListeningSocketSource,
     },
-    xwayland::X11Wm,
 };
 use tracing::warn;
 
-use crate::utils::{
-    focus::FocusTarget,
-    workspace::{WindowElement, Workspaces},
-};
+use crate::utils::{focus::FocusTarget, workspace::Workspaces};
 use crate::{
     config::{load_config, Config},
     debug::MagmaDebug,
@@ -47,7 +45,6 @@ pub trait Backend {
 
 pub static CONFIG: Lazy<Config> = Lazy::new(load_config);
 
-#[derive(Debug)]
 pub struct MagmaState<BackendData: Backend + 'static> {
     pub dh: DisplayHandle,
     pub backend_data: BackendData,
@@ -66,7 +63,6 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub seat_state: SeatState<MagmaState<BackendData>>,
     pub layer_shell_state: WlrLayerShellState,
     pub popup_manager: PopupManager,
-    pub xwm: Option<X11Wm>,
 
     pub seat: Seat<Self>,
     pub seat_name: String,
@@ -164,7 +160,6 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             shm_state,
             output_manager_state,
             popup_manager: PopupManager::default(),
-            xwm: None,
             seat_state,
             data_device_state,
             primary_selection_state,
@@ -184,7 +179,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
         }
     }
 
-    pub fn window_under(&mut self) -> Option<(WindowElement, Point<i32, Logical>)> {
+    pub fn window_under(&mut self) -> Option<(Window, Point<i32, Logical>)> {
         let pos = self.pointer_location;
         self.workspaces
             .current()

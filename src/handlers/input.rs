@@ -1,5 +1,3 @@
-use std::ops::Deref;
-
 use smithay::{
     backend::{
         input::{
@@ -22,7 +20,8 @@ use crate::{
     backends::udev::UdevData,
     config::Action,
     state::{Backend, MagmaState, CONFIG},
-    utils::{focus::FocusTarget, process, workspace::WindowElement},
+    utils::focus::FocusTarget,
+    utils::process,
 };
 
 impl MagmaState<UdevData> {
@@ -335,10 +334,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     .current()
                     .window_under(self.pointer_location)
                 {
-                    match d.0.deref() {
-                        WindowElement::Wayland(w) => w.toplevel().send_close(),
-                        WindowElement::X11(x) => x.close().unwrap(),
-                    }
+                    d.0.toplevel().unwrap().send_close()
                 }
             }
             Action::Workspace(id) => {

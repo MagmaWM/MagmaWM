@@ -1,10 +1,8 @@
-use std::ops::Deref;
-
 use smithay::{
     backend::renderer::utils::on_commit_buffer_handler,
     delegate_compositor, delegate_data_device, delegate_layer_shell, delegate_output,
     delegate_primary_selection, delegate_seat, delegate_shm,
-    desktop::{layer_map_for_output, space::SpaceElement, LayerSurface},
+    desktop::{layer_map_for_output, LayerSurface},
     input::{SeatHandler, SeatState},
     output::Output,
     reexports::wayland_server::{
@@ -17,6 +15,7 @@ use smithay::{
             get_parent, is_sync_subsurface, CompositorClientState, CompositorHandler,
             CompositorState,
         },
+        output::OutputHandler,
         seat::WaylandFocus,
         selection::{
             data_device::{
@@ -33,13 +32,11 @@ use smithay::{
         },
         shm::{ShmHandler, ShmState},
     },
-    xwayland::XWaylandClientData,
 };
-use tracing::error;
 
 use crate::{
     state::{Backend, ClientState, MagmaState},
-    utils::{focus::FocusTarget, tiling::bsp_update_layout, workspace::WindowElement},
+    utils::{focus::FocusTarget, tiling::bsp_update_layout},
 };
 
 pub mod input;
@@ -51,14 +48,7 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
     }
 
     fn client_compositor_state<'a>(&self, client: &'a Client) -> &'a CompositorClientState {
-        if let Some(state) = client.get_data::<XWaylandClientData>() {
-            return &state.compositor_state;
-        }
-        if let Some(state) = client.get_data::<ClientState>() {
-            return &state.compositor_state;
-        }
-        error!("Unknown client data type");
-        panic!("Unknown client data type");
+        &client.get_data::<ClientState>().unwrap().compositor_state
     }
 
     fn commit(&mut self, surface: &WlSurface) {
@@ -68,17 +58,12 @@ impl<BackendData: Backend> CompositorHandler for MagmaState<BackendData> {
             while let Some(parent) = get_parent(&root) {
                 root = parent;
             }
-            if let Some(window) = self.workspaces.all_windows().find(|w| match w.deref() {
-                WindowElement::Wayland(w) => w.toplevel().wl_surface() == &root,
-                WindowElement::X11(x) => match x.wl_surface() {
-                    Some(s) => s == root,
-                    None => false,
-                },
-            }) {
-                match window.deref() {
-                    WindowElement::Wayland(w) => w.on_commit(),
-                    WindowElement::X11(x) => x.refresh(),
-                }
+            if let Some(window) = self
+                .workspaces
+                .all_windows()
+                .find(|w| w.toplevel().unwrap().wl_surface() == &root)
+            {
+                window.on_commit();
             }
         };
         self.popup_manager.commit(surface);
@@ -107,6 +92,7 @@ delegate_shm!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
     type KeyboardFocus = FocusTarget;
     type PointerFocus = FocusTarget;
+    type TouchFocus = WlSurface;
 
     fn seat_state(&mut self) -> &mut SeatState<MagmaState<BackendData>> {
         &mut self.seat_state
@@ -129,36 +115,20 @@ impl<BackendData: Backend> SeatHandler for MagmaState<BackendData> {
 
         if let Some(focus_target) = focused {
             match focus_target {
-                FocusTarget::Window(ftw) => match ftw {
-                    WindowElement::Wayland(ftw_w) => {
-                        for window in self.workspaces.all_windows() {
-                            if let WindowElement::Wayland(w) = window.deref() {
-                                w.set_activated(ftw_w.eq(&w));
-                                w.toplevel().send_configure();
-                            }
+                FocusTarget::Window(w) => {
+                    for window in self.workspaces.all_windows() {
+                        if window.eq(w) {
+                            window.set_activated(true);
+                        } else {
+                            window.set_activated(false);
                         }
+                        window.toplevel().unwrap().send_configure();
                     }
-                    WindowElement::X11(ftw_x) => {
-                        for window in self.workspaces.all_windows() {
-                            if let WindowElement::X11(x) = window.deref() {
-                                let _ = x.set_activated(ftw_x.eq(&x));
-                                let _ = x.configure(None);
-                            }
-                        }
-                    }
-                },
+                }
                 FocusTarget::LayerSurface(_) => {
                     for window in self.workspaces.all_windows() {
-                        match window.deref() {
-                            WindowElement::Wayland(w) => {
-                                w.set_activated(false);
-                                w.toplevel().send_configure();
-                            }
-                            WindowElement::X11(x) => {
-                                let _ = x.set_activated(false);
-                                let _ = x.configure(None);
-                            }
-                        }
+                        window.set_activated(false);
+                        window.toplevel().unwrap().send_configure();
                     }
                 }
                 FocusTarget::Popup(_) => {}
@@ -199,6 +169,7 @@ delegate_primary_selection!(@<BackendData: Backend + 'static> MagmaState<Backend
 // Wl Output & Xdg Output
 //
 
+impl<BackendData: Backend> OutputHandler for MagmaState<BackendData> {}
 delegate_output!(@<BackendData: Backend + 'static> MagmaState<BackendData>);
 
 impl<BackendData: Backend> WlrLayerShellHandler for MagmaState<BackendData> {

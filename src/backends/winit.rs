@@ -1,4 +1,4 @@
-use std::{ops::Deref, time::Duration};
+use std::time::Duration;
 
 use smithay::{
     backend::{
@@ -28,17 +28,16 @@ use smithay::{
             ImportNotifier,
         },
         shell::wlr_layer::Layer,
-    }, xwayland::XWaylandEvent,
+    },
 };
 use tracing::{info, warn};
 
-use crate::{utils::{process, workspace::WindowElement}, xwayland::{self, XWaylandState}};
+use crate::utils::process;
 
 pub struct WinitData {
     backend: WinitGraphicsBackend<GlowRenderer>,
     damage_tracker: OutputDamageTracker,
     dmabuf_state: (DmabufState, DmabufGlobal, Option<DmabufFeedback>),
-    xwayland_state: XWaylandState,
 }
 
 impl DmabufHandler for MagmaState<WinitData> {
@@ -74,7 +73,7 @@ impl Backend for WinitData {
 }
 use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{border::BorderShader, CustomRenderElements},
+    utils::render::{border::BorderShader, init_shaders, CustomRenderElements},
 };
 
 pub fn init_winit() {
@@ -156,17 +155,12 @@ pub fn init_winit() {
         info!("EGL hardware-acceleration enabled");
     };
 
-    let display_handle: DisplayHandle = display.handle().clone();
-    
-    let (xwayland_state, xwayland_source) = xwayland::XWaylandState::new(&display_handle);
-    xwayland_state.start(event_loop.handle());
-
     let winitdata = WinitData {
         backend,
         damage_tracker: damage_tracked_renderer,
         dmabuf_state,
-        xwayland_state
     };
+    let display_handle: DisplayHandle = display.handle().clone();
     let state = MagmaState::new(
         event_loop.handle(),
         event_loop.get_signal(),
@@ -180,7 +174,7 @@ pub fn init_winit() {
     };
 
     let state = &mut data.state;
-    BorderShader::init(state.backend_data.backend.renderer());
+    init_shaders(state.backend_data.backend.renderer());
     // map output to every workspace
     for workspace in state.workspaces.iter() {
         workspace.add_output(output.clone());
@@ -199,17 +193,6 @@ pub fn init_winit() {
             TimeoutAction::ToDuration(Duration::from_millis(16))
         })
         .unwrap();
-
-    info!("Registering event handler for xwayland");
-    event_loop
-        .handle()
-        .insert_source(xwayland_source, move |event, _, calloopdata| {
-            calloopdata
-                .state
-                .on_xwayland_event(event, &mut calloopdata.display_handle)
-        })
-        .unwrap();
-
 
     for command in &CONFIG.autostart {
         process::spawn(command);
@@ -347,29 +330,17 @@ pub fn winit_dispatch(
     winitdata.backend.submit(Some(&[damage])).unwrap();
     #[cfg(feature = "debug")]
     state.debug.fps.displayed();
-    workspace.windows().for_each(|window| match window.deref() {
-        WindowElement::Wayland(w) => w.send_frame(
+    workspace.windows().for_each(|window| {
+        window.send_frame(
             output,
             state.start_time.elapsed(),
             Some(Duration::ZERO),
             |_, _| Some(output.clone()),
-        ),
-        WindowElement::X11(_x) => { /* TODO */ }
+        )
     });
 
     workspace.windows().for_each(|e| e.refresh());
     data.display_handle.flush_clients().unwrap();
     state.popup_manager.cleanup();
     BorderShader::cleanup(winitdata.backend.renderer());
-}
-
-impl MagmaState<WinitData> {
-    fn on_xwayland_event(&mut self, event: XWaylandEvent, display: &mut DisplayHandle) {
-        self.backend_data.xwayland_state.on_event(
-            event,
-            self.loop_handle.clone(),
-            display,
-            &mut self.xwm,
-        );
-    }
 }

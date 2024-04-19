@@ -23,7 +23,7 @@ use smithay::{
 
 use crate::{
     state::{Backend, MagmaState},
-    utils::{focus::FocusTarget, workspace::WindowElement},
+    utils::focus::FocusTarget,
 };
 
 pub const ELEMENTS_COLOR: Color32 = Color32::from_rgb(173, 216, 230);
@@ -32,7 +32,6 @@ pub const SCREENCOPY_COLOR: Color32 = Color32::from_rgb(255, 255, 153);
 pub const DISPLAY_COLOR: Color32 = Color32::from_rgb(152, 251, 152);
 const VENDORS: [(&str, &str); 3] = [("0x10de", "nvidia"), ("0x1002", "amd"), ("0x8086", "intel")];
 
-#[derive(Debug, Clone)]
 pub struct MagmaDebug {
     pub egui: smithay_egui::EguiState,
     pub active: bool,
@@ -270,44 +269,21 @@ impl MagmaDebug {
 fn format_focus(focus: Option<FocusTarget>) -> String {
     if let Some(focus) = focus {
         match focus {
-            FocusTarget::Window(win) => match win {
-                WindowElement::Wayland(w) => format!(
-                    "Window {} ({})",
-                    w.toplevel().wl_surface().id().protocol_id(),
-                    with_states(w.toplevel().wl_surface(), |states| {
-                        states
-                            .data_map
-                            .get::<XdgToplevelSurfaceData>()
-                            .unwrap()
-                            .lock()
-                            .unwrap()
-                            .title
-                            .clone()
-                            .unwrap_or_default()
-                    })
-                ),
-                WindowElement::X11(x) => {
-                    if let Some(surface) = x.wl_surface() {
-                        format!(
-                            "xwayland Window {} ({})",
-                            surface.id().protocol_id(),
-                            with_states(&surface, |states| {
-                                states
-                                    .data_map
-                                    .get::<XdgToplevelSurfaceData>()
-                                    .unwrap()
-                                    .lock()
-                                    .unwrap()
-                                    .title
-                                    .clone()
-                                    .unwrap_or_default()
-                            })
-                        )
-                    } else {
-                        "xwayland Window (no wl_surface)".to_string()
-                    }
-                }
-            },
+            FocusTarget::Window(w) => format!(
+                "Window {} ({})",
+                w.toplevel().unwrap().wl_surface().id().protocol_id(),
+                with_states(w.toplevel().unwrap().wl_surface(), |states| {
+                    states
+                        .data_map
+                        .get::<XdgToplevelSurfaceData>()
+                        .unwrap()
+                        .lock()
+                        .unwrap()
+                        .title
+                        .clone()
+                        .unwrap_or_default()
+                })
+            ),
             FocusTarget::LayerSurface(l) => {
                 format!("LayerSurface {}", l.wl_surface().id().protocol_id())
             }
@@ -318,13 +294,12 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
     }
 }
 
-#[derive(Default, Debug, Clone)]
+#[derive(Default)]
 pub struct Fps {
     current_frame: Option<PendingFrame>,
     frames: VecDeque<Frame>,
 }
 
-#[derive(Debug, Clone, Copy)]
 struct PendingFrame {
     start: Instant,
     duration_elements: Option<Duration>,
@@ -333,7 +308,6 @@ struct PendingFrame {
     duration_displayed: Option<Duration>,
 }
 
-#[derive(Debug, Clone, Copy)]
 pub struct Frame {
     pub start: Instant,
     pub duration_elements: Duration,
