@@ -2,7 +2,7 @@ use std::{cell::RefCell, rc::Rc};
 
 use crate::state::CONFIG;
 use smithay::{
-    desktop::layer_map_for_output,
+    desktop::{layer_map_for_output, WindowSurface},
     utils::{Logical, Physical, Point, Rectangle, Size},
 };
 use tracing::debug;
@@ -66,14 +66,15 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
     }
     debug!("{:#?}", workspace.layout_tree);
     for magmawindow in workspace.magmawindows() {
-        let xdg_toplevel = magmawindow.window.toplevel();
-        if xdg_toplevel.is_none() {
-            continue;
+        match magmawindow.window.underlying_surface() {
+            WindowSurface::Wayland(w) => {
+                w.with_pending_state(|state| {
+                    state.size = Some(magmawindow.rec.size);
+                });
+                w.send_configure();
+            }
+            WindowSurface::X11(x) => x.configure(Some(magmawindow.rec)).unwrap(),
         }
-        xdg_toplevel.unwrap().with_pending_state(|state| {
-            state.size = Some(magmawindow.rec.size);
-        });
-        xdg_toplevel.unwrap().send_configure();
     }
 }
 
