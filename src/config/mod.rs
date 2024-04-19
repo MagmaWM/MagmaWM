@@ -13,7 +13,7 @@ use smithay::{
     input::keyboard::{xkb::keysyms, Keysym},
     utils::{Physical, Size},
 };
-use tracing::{info, warn};
+use tracing::{error, info, warn};
 
 mod types;
 
@@ -132,21 +132,24 @@ pub fn load_config() -> Config {
         vec![]
     };
 
-    // TODO: Don't panic unless unable to read ANY config file
+    // try to read from each config file location
     for path in locations {
         info!("Trying config location: {}", path.display());
         if path.exists() {
-            info!("Using config at {}", path.display());
-            return ron::de::from_reader(
-                OpenOptions::new()
-                    .read(true)
-                    .open(&path)
-                    .unwrap_or_else(|e| panic!("Unable to open file '{}': {e}", path.display())),
-            )
-            .unwrap_or_else(|e| panic!("Malformed config file: {e}"));
+            match OpenOptions::new().read(true).open(&path) {
+                Ok(file) => match ron::de::from_reader(file) {
+                    Ok(config_data) => {
+                        info!("Using config at {}", path.display());
+                        return config_data;
+                    }
+                    Err(e) => error!("Malformed config file '{}': {e}", path.display()),
+                },
+                Err(e) => warn!("Unable to read config file '{}': {e}", path.display()),
+            }
         }
     }
-    info!("No config file found in default locations, prompting generation");
+
+    warn!("No working config file found in default locations");
     let config = generate_config();
     ron::de::from_reader(
         OpenOptions::new()
@@ -168,14 +171,19 @@ pub fn load_config() -> Config {
 /// # Returns
 /// The path of the generated config file
 fn generate_config() -> PathBuf {
-    warn!("No config file found, generating one");
     let xdg = xdg::BaseDirectories::new()
         .unwrap_or_else(|e| panic!("Unable to get XDG base directories: {e}"));
     let config_path = xdg
         .place_config_file("magmawm/config.ron")
         .unwrap_or_else(|e| panic!("Unable to create config directory: {e}"));
-    let mut config_file =
-        File::create(&config_path).unwrap_or_else(|e| panic!("Unable to create config file: {e}"));
+    let mut config_file = File::create(&config_path).unwrap_or_else(|e| {
+        panic!(
+            "Unable to create config file '{}': {e}",
+            config_path.display()
+        )
+    });
+
+    warn!("Generating new config file: '{}'", config_path.display());
 
     let mut keybinding_map = indexmap::IndexMap::<KeyPattern, Action>::new();
     keybinding_map.insert(
