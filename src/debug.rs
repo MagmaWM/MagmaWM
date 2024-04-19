@@ -271,8 +271,8 @@ fn format_focus(focus: Option<FocusTarget>) -> String {
         match focus {
             FocusTarget::Window(w) => format!(
                 "Window {} ({})",
-                w.toplevel().wl_surface().id().protocol_id(),
-                with_states(w.toplevel().wl_surface(), |states| {
+                w.toplevel().unwrap().wl_surface().id().protocol_id(),
+                with_states(w.toplevel().unwrap().wl_surface(), |states| {
                     states
                         .data_map
                         .get::<XdgToplevelSurfaceData>()
