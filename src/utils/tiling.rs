@@ -67,10 +67,10 @@ pub fn bsp_update_layout(workspace: &mut Workspace) {
     debug!("{:#?}", workspace.layout_tree);
     for magmawindow in workspace.magmawindows() {
         let xdg_toplevel = magmawindow.window.toplevel();
-        xdg_toplevel.with_pending_state(|state| {
+        xdg_toplevel.unwrap().with_pending_state(|state| {
             state.size = Some(magmawindow.rec.size);
         });
-        xdg_toplevel.send_configure();
+        xdg_toplevel.unwrap().send_configure();
     }
 }
 
