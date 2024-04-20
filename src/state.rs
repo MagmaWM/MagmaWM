@@ -118,7 +118,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
                 .expect("Failed to load xkb configuration files");
         }
         seat.add_pointer();
-        let mut xcursor = Xcursor::new();
+        let xcursor = Xcursor::new();
 
         let workspaces = Workspaces::new(CONFIG.workspaces);
 
