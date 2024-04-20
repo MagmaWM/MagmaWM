@@ -28,7 +28,7 @@ impl Xcursor {
         let cursor_path = theme.load_icon(variant).unwrap();
 
         let mut cursor_data = Vec::new();
-        let mut file = File::open(&cursor_path).unwrap();
+        let mut file = File::open(cursor_path).unwrap();
         file.read_to_end(&mut cursor_data).unwrap();
 
         let images = parser::parse_xcursor(&cursor_data).unwrap();
@@ -78,7 +78,7 @@ impl Xcursor {
 
     pub fn change_variant(&mut self, name: &str) -> bool {
         if let Some(path) = self.theme.load_icon(name) {
-            let mut file = File::open(&path).unwrap();
+            let mut file = File::open(path).unwrap();
             let mut image_data = Vec::new();
             file.read_to_end(&mut image_data).unwrap();
             let images = parser::parse_xcursor(&image_data).unwrap();
@@ -106,5 +106,11 @@ impl Xcursor {
         self.images
             .get(self.curr_image_pos)
             .expect("Unable to get xcursor image data")
+    }
+}
+
+impl Default for Xcursor {
+    fn default() -> Self {
+        Self::new()
     }
 }
