@@ -326,6 +326,17 @@ pub fn init_udev() {
                 .workspaces
                 .all_windows()
                 .for_each(|e| e.refresh());
+
+            let output = data.state.workspaces.current().outputs().next().unwrap();
+            for layer in layer_map_for_output(output).layers() {
+                layer.send_frame(
+                    output,
+                    data.state.start_time.elapsed(),
+                    Some(Duration::ZERO),
+                    |_, _| Some(output.clone()),
+                );
+            }
+
             data.display_handle.flush_clients().unwrap();
             data.state.popup_manager.cleanup();
         })
