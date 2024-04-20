@@ -330,6 +330,7 @@ pub fn winit_dispatch(
     winitdata.backend.submit(Some(&[damage])).unwrap();
     #[cfg(feature = "debug")]
     state.debug.fps.displayed();
+
     workspace.windows().for_each(|window| {
         window.send_frame(
             output,
@@ -338,6 +339,16 @@ pub fn winit_dispatch(
             |_, _| Some(output.clone()),
         )
     });
+
+    drop(layer_map);
+    for layer in layer_map_for_output(output).layers() {
+        layer.send_frame(
+            output,
+            state.start_time.elapsed(),
+            Some(Duration::ZERO),
+            |_, _| Some(output.clone()),
+        );
+    }
 
     workspace.windows().for_each(|e| e.refresh());
     data.display_handle.flush_clients().unwrap();
