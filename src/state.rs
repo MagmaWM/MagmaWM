@@ -1,13 +1,13 @@
-use std::{ffi::OsString, sync::Arc, time::Instant};
+use std::{ffi::OsString, sync::Arc, time::{Duration, Instant}};
 
 use once_cell::sync::Lazy;
 use smithay::{
     desktop::{
-        layer_map_for_output, {PopupManager, Window},
+        layer_map_for_output, PopupManager, Window,
     },
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
-        calloop::{generic::Generic, Interest, LoopHandle, LoopSignal, Mode, PostAction},
+        calloop::{generic::Generic, timer::{TimeoutAction, Timer}, Interest, LoopHandle, LoopSignal, Mode, PostAction},
         wayland_server::{
             backend::{ClientData, ClientId, DisconnectReason},
             Display, DisplayHandle,
@@ -15,20 +15,15 @@ use smithay::{
     },
     utils::{Logical, Point, Rectangle},
     wayland::{
-        compositor::{CompositorClientState, CompositorState},
-        output::OutputManagerState,
-        selection::{data_device::DataDeviceState, primary_selection::PrimarySelectionState},
-        shell::{
+        compositor::{CompositorClientState, CompositorState}, cursor_shape::CursorShapeManagerState, output::OutputManagerState, selection::{data_device::DataDeviceState, primary_selection::PrimarySelectionState}, shell::{
             wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
             xdg::{decoration::XdgDecorationState, XdgShellState},
-        },
-        shm::ShmState,
-        socket::ListeningSocketSource,
+        }, shm::ShmState, socket::ListeningSocketSource
     },
 };
 use tracing::warn;
 
-use crate::utils::{focus::FocusTarget, workspace::Workspaces};
+use crate::utils::{focus::FocusTarget, workspace::Workspaces, xcursor::Xcursor};
 use crate::{
     config::{load_config, Config},
     debug::MagmaDebug,
@@ -63,6 +58,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
     pub seat_state: SeatState<MagmaState<BackendData>>,
     pub layer_shell_state: WlrLayerShellState,
     pub popup_manager: PopupManager,
+    pub cursor_shape_manager: CursorShapeManagerState,
 
     pub seat: Seat<Self>,
     pub seat_name: String,
@@ -70,6 +66,7 @@ pub struct MagmaState<BackendData: Backend + 'static> {
 
     pub workspaces: Workspaces,
     pub pointer_location: Point<f64, Logical>,
+    pub xcursor: Xcursor,
 
     #[cfg(feature = "debug")]
     pub debug: MagmaDebug,
@@ -97,6 +94,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
         let seat_name = backend_data.seat_name();
         let mut seat = seat_state.new_wl_seat(&dh, seat_name.clone());
         let layer_shell_state = WlrLayerShellState::new::<Self>(&dh);
+        let cursor_shape_manager = CursorShapeManagerState::new::<Self>(&dh);
 
         let conf = CONFIG.xkb.clone();
         if let Err(err) = seat.add_keyboard((&conf).into(), 200, 25) {
@@ -108,6 +106,7 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
                 .expect("Failed to load xkb configuration files");
         }
         seat.add_pointer();
+        let mut xcursor = Xcursor::new();
 
         let workspaces = Workspaces::new(CONFIG.workspaces);
 
@@ -146,6 +145,16 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             )
             .expect("Failed to init wayland server source");
 
+        loop_handle
+            .insert_source(
+                Timer::from_duration(Duration::from_millis(xcursor.get_curr_image().delay.into())),
+                |_, _, d| {
+                    d.state.xcursor.tick();
+                    TimeoutAction::ToDuration(Duration::from_millis(d.state.xcursor.get_curr_image().delay.into()))
+                }
+            )
+            .expect("Failed to init cursor tick event source");
+
         Self {
             loop_handle,
             dh,
@@ -164,9 +173,11 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
             data_device_state,
             primary_selection_state,
             layer_shell_state,
+            cursor_shape_manager,
             seat,
             workspaces,
             pointer_location: Point::from((0.0, 0.0)),
+            xcursor,
             #[cfg(feature = "debug")]
             debug: MagmaDebug {
                 egui: smithay_egui::EguiState::new(Rectangle::from_loc_and_size(

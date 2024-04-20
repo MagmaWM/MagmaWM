@@ -3,6 +3,7 @@ use xcursor::{parser::{self, Image}, CursorTheme};
 
 pub struct Xcursor {
     images: Vec<Image>,
+    curr_image_pos: usize,
     size: u32,
     variant: String,
     theme: CursorTheme
@@ -55,9 +56,36 @@ impl Xcursor {
         
         Self {
             images,
+            curr_image_pos: 0,
             size,
             variant: variant.to_owned(),
             theme
         }
+    }
+
+    pub fn change_variant(&mut self, name: &str) -> bool {
+        if let Some(path) = self.theme.load_icon(name) {
+            let mut file = File::open(&path).unwrap();
+            let mut image_data = Vec::new();
+            file.read_to_end(&mut image_data).unwrap();
+            let images = parser::parse_xcursor(&image_data).unwrap();
+            let images = images.iter().filter(|i| i.size == self.size).fold(Vec::new(), |mut v, i| {
+                v.push(i.clone());
+                v
+            });
+            self.variant = name.to_owned();
+            self.images = images;
+            true
+        } else {
+            false
+        }
+    }
+
+    pub fn tick(&mut self) {
+        self.curr_image_pos = (self.curr_image_pos + 1) % self.images.len();
+    }
+
+    pub fn get_curr_image(&self) -> &Image {
+        self.images.get(self.curr_image_pos).expect("Unable to get xcursor image data")
     }
 }
