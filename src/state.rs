@@ -1,13 +1,19 @@
-use std::{ffi::OsString, sync::Arc, time::{Duration, Instant}};
+use std::{
+    ffi::OsString,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use once_cell::sync::Lazy;
 use smithay::{
-    desktop::{
-        layer_map_for_output, PopupManager, Window,
-    },
+    desktop::{layer_map_for_output, PopupManager, Window},
     input::{keyboard::XkbConfig, Seat, SeatState},
     reexports::{
-        calloop::{generic::Generic, timer::{TimeoutAction, Timer}, Interest, LoopHandle, LoopSignal, Mode, PostAction},
+        calloop::{
+            generic::Generic,
+            timer::{TimeoutAction, Timer},
+            Interest, LoopHandle, LoopSignal, Mode, PostAction,
+        },
         wayland_server::{
             backend::{ClientData, ClientId, DisconnectReason},
             Display, DisplayHandle,
@@ -15,10 +21,16 @@ use smithay::{
     },
     utils::{Logical, Point, Rectangle},
     wayland::{
-        compositor::{CompositorClientState, CompositorState}, cursor_shape::CursorShapeManagerState, output::OutputManagerState, selection::{data_device::DataDeviceState, primary_selection::PrimarySelectionState}, shell::{
+        compositor::{CompositorClientState, CompositorState},
+        cursor_shape::CursorShapeManagerState,
+        output::OutputManagerState,
+        selection::{data_device::DataDeviceState, primary_selection::PrimarySelectionState},
+        shell::{
             wlr_layer::{Layer as WlrLayer, WlrLayerShellState},
             xdg::{decoration::XdgDecorationState, XdgShellState},
-        }, shm::ShmState, socket::ListeningSocketSource
+        },
+        shm::ShmState,
+        socket::ListeningSocketSource,
     },
 };
 use tracing::warn;
@@ -150,8 +162,10 @@ impl<BackendData: Backend + 'static> MagmaState<BackendData> {
                 Timer::from_duration(Duration::from_millis(xcursor.get_curr_image().delay.into())),
                 |_, _, d| {
                     d.state.xcursor.tick();
-                    TimeoutAction::ToDuration(Duration::from_millis(d.state.xcursor.get_curr_image().delay.into()))
-                }
+                    TimeoutAction::ToDuration(Duration::from_millis(
+                        d.state.xcursor.get_curr_image().delay.into(),
+                    ))
+                },
             )
             .expect("Failed to init cursor tick event source");
 

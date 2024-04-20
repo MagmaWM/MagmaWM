@@ -1,13 +1,16 @@
 use std::{env, fs::File, io::Read};
-use xcursor::{parser::{self, Image}, CursorTheme};
+use xcursor::{
+    parser::{self, Image},
+    CursorTheme,
+};
 
 pub struct Xcursor {
     images: Vec<Image>,
     curr_image_pos: usize,
     size: u32,
     variant: String,
-    theme: CursorTheme
-}   
+    theme: CursorTheme,
+}
 
 impl Xcursor {
     pub fn new() -> Self {
@@ -33,7 +36,10 @@ impl Xcursor {
         let inputted_size = match env::var("XCURSOR_SIZE") {
             Ok(size) => {
                 let size: u32 = size.parse().unwrap_or_else(|e| {
-                    tracing::error!("Couldn't parse $XCURSOR_SIZE environment variable as numerical value: {}", e);
+                    tracing::error!(
+                        "Couldn't parse $XCURSOR_SIZE environment variable as numerical value: {}",
+                        e
+                    );
                     tracing::warn!("Falling back to 24 as the xcursor size");
                     24
                 });
@@ -47,19 +53,26 @@ impl Xcursor {
         };
 
         // Finds the nearest supported cursor size
-        let size = images.iter().map(|i| i.size).min_by_key(|s| u32::abs_diff(inputted_size, *s)).unwrap();
+        let size = images
+            .iter()
+            .map(|i| i.size)
+            .min_by_key(|s| u32::abs_diff(inputted_size, *s))
+            .unwrap();
 
-        let images = images.iter().filter(|i| i.size == size).fold(Vec::new(), |mut accum, i| {
-            accum.push(i.clone());
-            accum
-        });
-        
+        let images = images
+            .iter()
+            .filter(|i| i.size == size)
+            .fold(Vec::new(), |mut accum, i| {
+                accum.push(i.clone());
+                accum
+            });
+
         Self {
             images,
             curr_image_pos: 0,
             size,
             variant: variant.to_owned(),
-            theme
+            theme,
         }
     }
 
@@ -69,10 +82,14 @@ impl Xcursor {
             let mut image_data = Vec::new();
             file.read_to_end(&mut image_data).unwrap();
             let images = parser::parse_xcursor(&image_data).unwrap();
-            let images = images.iter().filter(|i| i.size == self.size).fold(Vec::new(), |mut v, i| {
-                v.push(i.clone());
-                v
-            });
+            let images =
+                images
+                    .iter()
+                    .filter(|i| i.size == self.size)
+                    .fold(Vec::new(), |mut v, i| {
+                        v.push(i.clone());
+                        v
+                    });
             self.variant = name.to_owned();
             self.images = images;
             true
@@ -86,6 +103,8 @@ impl Xcursor {
     }
 
     pub fn get_curr_image(&self) -> &Image {
-        self.images.get(self.curr_image_pos).expect("Unable to get xcursor image data")
+        self.images
+            .get(self.curr_image_pos)
+            .expect("Unable to get xcursor image data")
     }
 }
