@@ -334,7 +334,7 @@ impl<BackendData: Backend> MagmaState<BackendData> {
                     .current()
                     .window_under(self.pointer_location)
                 {
-                    d.0.toplevel().send_close()
+                    d.0.toplevel().unwrap().send_close()
                 }
             }
             Action::Workspace(id) => {

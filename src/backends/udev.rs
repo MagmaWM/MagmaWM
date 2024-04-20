@@ -10,7 +10,7 @@ use smithay::{
         drm::{
             self,
             compositor::{DrmCompositor, RenderFrameResult},
-            DrmDevice, DrmDeviceFd, DrmError, DrmNode, NodeType,
+            DrmAccessError, DrmDevice, DrmDeviceFd, DrmError, DrmNode, NodeType,
         },
         egl::{EGLDevice, EGLDisplay},
         libinput::{LibinputInputBackend, LibinputSessionInterface},
@@ -61,7 +61,7 @@ use smithay_drm_extras::{
     drm_scanner::{DrmScanEvent, DrmScanner},
     edid::EdidInfo,
 };
-use tracing::{error, info, trace, warn};
+use tracing::{debug, error, info, trace, warn};
 
 use crate::{
     delegate_screencopy_manager,
@@ -69,7 +69,7 @@ use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
     utils::{
         process,
-        render::{border::BorderShader, CustomRenderElements},
+        render::{border::BorderShader, init_shaders, CustomRenderElements},
     },
 };
 
@@ -88,7 +88,7 @@ pub type GbmDrmCompositor =
 pub struct UdevData {
     pub session: LibSeatSession,
     primary_gpu: DrmNode,
-    gpus: GpuManager<GbmGlesBackend<GlowRenderer>>,
+    gpus: GpuManager<GbmGlesBackend<GlowRenderer, DrmDeviceFd>>,
     devices: HashMap<DrmNode, Device>,
     dmabuf_state: Option<(DmabufState, DmabufGlobal)>,
 }
@@ -207,7 +207,7 @@ pub fn init_udev() {
                     libinput_context.suspend();
                     info!("pausing session");
 
-                    for backend in data.state.backend_data.devices.values() {
+                    for backend in data.state.backend_data.devices.values_mut() {
                         backend.drm.pause();
                     }
                 }
@@ -224,7 +224,8 @@ pub fn init_udev() {
                         .iter_mut()
                         .map(|(handle, backend)| (*handle, backend))
                     {
-                        backend.drm.activate();
+                        //TODO handle errors
+                        let _ = backend.drm.activate(false);
                         for (crtc, surface) in backend
                             .surfaces
                             .iter_mut()
@@ -399,7 +400,7 @@ impl MagmaState<UdevData> {
 
         // Make sure display is dropped before we call add_node
         let render_node =
-            match EGLDevice::device_for_display(&EGLDisplay::new(gbm.clone()).unwrap())
+            match EGLDevice::device_for_display(unsafe { &EGLDisplay::new(gbm.clone()).unwrap() })
                 .ok()
                 .and_then(|x| x.try_get_render_node().ok().flatten())
             {
@@ -476,6 +477,7 @@ impl MagmaState<UdevData> {
                 surface.compositor.frame_submitted().ok();
                 #[cfg(feature = "debug")]
                 self.debug.fps.displayed();
+                debug!("VBlank event on {:?}", crtc);
                 self.render(node, crtc, None).ok();
             }
             drm::DrmEvent::Error(_) => {}
@@ -622,7 +624,7 @@ impl MagmaState<UdevData> {
                     None,
                 )
                 .unwrap();
-                BorderShader::init(renderer.as_mut());
+                init_shaders(renderer.as_mut());
                 let surface = Surface {
                     _device_id: node,
                     _render_node: device.render_node,
@@ -766,7 +768,7 @@ impl MagmaState<UdevData> {
 
         let frame_result: Result<RenderFrameResult<_, _, _>, SwapBuffersError> = surface
             .compositor
-            .render_frame::<_, _, GlesTexture>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
+            .render_frame::<_, _>(&mut renderer, &renderelements, [0.1, 0.1, 0.1, 1.0])
             .map_err(|err| match err {
                 smithay::backend::drm::compositor::RenderFrameError::PrepareFrame(err) => {
                     err.into()
@@ -784,9 +786,8 @@ impl MagmaState<UdevData> {
             if let Ok(frame_result) = &frame_result {
                 // Mark entire buffer as damaged.
                 let region = screencopy.region();
-                if let Some(damage) = frame_result.damage.clone() {
-                    screencopy.damage(&damage);
-                }
+                let damage = [Rectangle::from_loc_and_size((0, 0), region.size)];
+                screencopy.damage(&damage);
 
                 let shm_buffer = screencopy.buffer();
 
@@ -861,7 +862,7 @@ impl MagmaState<UdevData> {
         }
 
         let mut result = match frame_result {
-            Ok(frame_result) => Ok(frame_result.damage.is_some()),
+            Ok(frame_result) => Ok(!frame_result.is_empty),
             Err(frame_result) => Err(frame_result),
         };
 
@@ -893,10 +894,7 @@ impl MagmaState<UdevData> {
                     }
                     SwapBuffersError::TemporaryFailure(err) => matches!(
                         err.downcast_ref::<DrmError>(),
-                        Some(DrmError::Access {
-                            source,
-                            ..
-                        }) if source.kind() == io::ErrorKind::PermissionDenied
+                        Some(DrmError::Access(DrmAccessError {source, ..})) if source.kind() == io::ErrorKind::PermissionDenied
                     ),
                     SwapBuffersError::ContextLost(err) => {
                         warn!("Rendering loop lost: {}", err);

@@ -10,7 +10,7 @@ env:
   RUSTFLAGS: -D warnings
 
 jobs:
-  format:
+  check:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
@@ -29,14 +29,14 @@ jobs:
           toolchain: stable
           override: true
           profile: minimal
-          components: rustfmt
+          components: clippy
           default: true
-      - name: Format
+      - name: System dependencies
+        run: sudo apt-get update; sudo apt-get install -y libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
+      - name: Check
         uses: actions-rs/cargo@v1
         with:
-          command: fmt
-          args: --all -- --check
-
+          command: check
   clippy-check:
     runs-on: ubuntu-22.04
     steps:
@@ -66,10 +66,7 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           args: -- -D warnings
 
-  check:
-    needs:
-      - clippy-check
-      - format
+  format:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout sources
@@ -88,14 +85,13 @@ jobs:
           toolchain: stable
           override: true
           profile: minimal
-          components: clippy
+          components: rustfmt
           default: true
-      - name: System dependencies
-        run: sudo apt-get update; sudo apt-get install -y libudev-dev libgbm-dev libxkbcommon-dev libegl1-mesa-dev libwayland-dev libinput-dev libdbus-1-dev libsystemd-dev libseat-dev
-      - name: Check
+      - name: Format
         uses: actions-rs/cargo@v1
         with:
-          command: check
+          command: fmt
+          args: --all -- --check
 
   build:
     needs:
