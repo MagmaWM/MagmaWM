@@ -18,7 +18,7 @@ use crate::state::CONFIG;
 
 use super::{
     binarytree::BinaryTree,
-    render::{border::BorderShader, AsGlowRenderer},
+    render::{border::BorderShader, wrap_window_surface, AsGlowRenderer, WindowRenderElement},
     tiling::bsp_update_layout,
 };
 
@@ -90,13 +90,15 @@ impl Workspace {
 
     pub fn render_elements<
         R: Renderer + ImportAll + AsGlowRenderer,
-        C: From<WaylandSurfaceRenderElement<R>> + From<PixelShaderElement>,
+        C: From<WaylandSurfaceRenderElement<R>>
+            + From<PixelShaderElement>
+            + From<WindowRenderElement<R>>,
     >(
         &self,
         renderer: &mut R,
     ) -> Vec<C>
     where
-        <R as Renderer>::TextureId: Texture + 'static,
+        <R as Renderer>::TextureId: Clone + Texture + 'static,
     {
         let mut render_elements: Vec<C> = Vec::new();
         for element in &self.windows {
@@ -108,12 +110,13 @@ impl Workspace {
                     element.borrow().rec.loc,
                 )));
             }
-            render_elements.append(&mut window.render_elements(
+            //wrap and add window surfaces
+            render_elements.append(&mut wrap_window_surface(window.render_elements(
                 renderer,
                 element.borrow().render_location().to_physical(1),
                 Scale::from(1.0),
                 1.0,
-            ));
+            )));
         }
         render_elements
     }

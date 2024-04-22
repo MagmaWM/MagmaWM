@@ -73,7 +73,7 @@ impl Backend for WinitData {
 }
 use crate::{
     state::{Backend, CalloopData, MagmaState, CONFIG},
-    utils::render::{border::BorderShader, CustomRenderElements},
+    utils::render::{border::BorderShader, init_shaders, CustomRenderElements},
 };
 
 pub fn init_winit() {
@@ -174,7 +174,7 @@ pub fn init_winit() {
     };
 
     let state = &mut data.state;
-    BorderShader::init(state.backend_data.backend.renderer());
+    init_shaders(state.backend_data.backend.renderer());
     // map output to every workspace
     for workspace in state.workspaces.iter() {
         workspace.add_output(output.clone());
@@ -330,6 +330,7 @@ pub fn winit_dispatch(
     winitdata.backend.submit(Some(&[damage])).unwrap();
     #[cfg(feature = "debug")]
     state.debug.fps.displayed();
+
     workspace.windows().for_each(|window| {
         window.send_frame(
             output,
@@ -338,6 +339,16 @@ pub fn winit_dispatch(
             |_, _| Some(output.clone()),
         )
     });
+
+    drop(layer_map);
+    for layer in layer_map_for_output(output).layers() {
+        layer.send_frame(
+            output,
+            state.start_time.elapsed(),
+            Some(Duration::ZERO),
+            |_, _| Some(output.clone()),
+        );
+    }
 
     workspace.windows().for_each(|e| e.refresh());
     data.display_handle.flush_clients().unwrap();
