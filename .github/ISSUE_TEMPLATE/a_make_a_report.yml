@@ -13,9 +13,9 @@ body:
           required: true
         - label: I've verified that I'm running **the most** recent nightly build or stable release
           required: true
-        - label: I've looked for my problem on the [wiki](https://github.com/MagmaWM/MagmaWM/Help/)
+        - label: I've looked for my problem on the [wiki](https://magmawm.org/docs/)
           required: true
-        - label: I've searched the [issues and pull requests](https://github.com/MagmaWM/MagmaWM/issues?q=) for similar looking reports
+        - label: I've searched the [issues and pull requests](https://github.com/MagmaWM/MagmaWM/issues) for similar looking reports
           required: true
 
   - type: textarea
