@@ -269,7 +269,12 @@ pub fn init_udev() {
                 device_id,
                 path: path.to_owned(),
             },
-            &mut display_handle,); } event_loop .handle() .insert_source(backend, |event, _, state| {
+            &mut display_handle,
+        );
+    }
+    event_loop
+        .handle()
+        .insert_source(backend, |event, _, state| {
             state.on_udev_event(event, &mut state.dh.clone())
         })
         .unwrap();
@@ -315,7 +320,12 @@ pub fn init_udev() {
 
             let output = state.workspaces.current().outputs().next().unwrap();
             for layer in layer_map_for_output(output).layers() {
-                layer.send_frame(output, state.start_time.elapsed(), Some(Duration::ZERO), |_, _| Some(output.clone()));
+                layer.send_frame(
+                    output,
+                    state.start_time.elapsed(),
+                    Some(Duration::ZERO),
+                    |_, _| Some(output.clone()),
+                );
             }
 
             display_handle.flush_clients().unwrap();
