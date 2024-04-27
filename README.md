@@ -72,6 +72,83 @@ The binary will be created in `./target/release/magmawm`.
 ## Install
 **MagmaWM** is still under heavy development and installation is not recommended.
 If you really want to, run the following command to install MagmaWM: 
+
+#### Nixos
+The following are two different ways to go about installing MagmaWM
+##### With overlays
+The cleaner option, but can cause issues with hash mismatching
+```nix
+{
+	inputs = {
+    	nixpkgs.url = "nixpkgs/nixos-unstable";
+    	home-manager = {
+    		url = "github:nix-community/home-manager";
+    		inputs.nixpkgs.follows = "nixpkgs";
+    	};
+    	magmawm.url = "path:./resources/magmawm";
+ 	};
+
+ 	outputs = inputs@{ self, nixpkgs, home-manager, magmawm, ... }: {
+    	nixosConfigurations = {
+      		holly = nixpkgs.lib.nixosSystem {
+        		system = "x86_64-linux";
+        		specialArgs = {};
+        		modules = [
+          			./holly/system
+          			home-manager.nixosModules.home-manager
+					{
+          				home-manager.useGlobalPkgs = true;
+          				home-manager.useUserPackages = true;
+          				home-manager.users.holly = import ./holly/home;
+          				home-manager.extraSpecialArgs = {};
+          			}
+          			({config, ...}: {
+						config = {
+							nixpkgs.overlays = [ magmawm.overlays.default ];
+						};
+					})
+        		];
+      		};
+    	};
+ 	};
+}
+```
+and then install it like any other program using ```nix pkgs.magmawm```
+##### Without overlays
+The less clean option, but wont have issues with has mismatching
+```nix
+{
+	inputs = {
+    	nixpkgs.url = "nixpkgs/nixos-unstable";
+    	home-manager = {
+    		url = "github:nix-community/home-manager";
+    		inputs.nixpkgs.follows = "nixpkgs";
+    	};
+    	magmawm.url = "path:./resources/magmawm";
+ 	};
+
+ 	outputs = inputs@{ self, nixpkgs, home-manager, magmawm, ... }: {
+    	nixosConfigurations = {
+      		holly = nixpkgs.lib.nixosSystem {
+        		system = "x86_64-linux";
+        		specialArgs = {inherit magmawm; };
+        		modules = [
+          			./holly/system
+          			home-manager.nixosModules.home-manager
+					{
+          				home-manager.useGlobalPkgs = true;
+          				home-manager.useUserPackages = true;
+          				home-manager.users.holly = import ./holly/home;
+          				home-manager.extraSpecialArgs = { inherit magmawm; };
+          			}
+        		];
+      		};
+    	};
+ 	};
+}
+```
+and then install it like any other program using ```magmawm.packages.${pkgs.stdenv.hostPlatform.system}.default```. Make sure to include ```magmawm``` in your module arguments for the file that you are using for installing it.
+#### Other
 ```bash
 cargo install --path .
 ```
