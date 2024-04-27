@@ -118,11 +118,13 @@ The cleaner option, but can cause issues with hash mismatching
 }
 ```
 <!-- and then install it like any other program using ``` pkgs.magmawm ``` -->
+</br>
 </details>
 
 <details>
 <summary>Without overlays</summary>
 <br>
+
 The less clean option, but wont have issues with has mismatching
 ```nix
 {
@@ -156,6 +158,7 @@ The less clean option, but wont have issues with has mismatching
 }
 ```
 <!-- and then install it like any other program using ``` magmawm.packages.${pkgs.stdenv.hostPlatform.system}.default ```. Make sure to include ```magmawm``` in your module arguments for the file your using to install MagmaWM. -->
+</br>
 </details>
 
 #### Other
