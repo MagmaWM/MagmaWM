@@ -79,8 +79,10 @@ The following are two different ways to go about installing MagmaWM
 <details>
 <summary>With overlays</summary>
 <br>
+
 The cleaner option, but can cause issues with hash mismatching
-```{
+```nix
+{
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
     home-manager = {
@@ -115,7 +117,7 @@ The cleaner option, but can cause issues with hash mismatching
   };
 }
 ```
-and then install it like any other program using ```pkgs.magmawm```
+<!-- and then install it like any other program using ```pkgs.magmawm``` -->
 </details>
 
 <details>
@@ -152,7 +154,7 @@ The less clean option, but wont have issues with has mismatching
   };
 }
 ```
-and then install it like any other program using ```magmawm.packages.${pkgs.stdenv.hostPlatform.system}.default```. Make sure to include ```magmawm``` in your module arguments for the file your using to install MagmaWM.
+<!-- and then install it like any other program using ```magmawm.packages.${pkgs.stdenv.hostPlatform.system}.default```. Make sure to include ```magmawm``` in your module arguments for the file your using to install MagmaWM. -->
 </details>
 
 #### Other
