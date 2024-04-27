@@ -81,7 +81,7 @@ The following are two different ways to go about installing MagmaWM
 <br>
 
 The cleaner option, but can cause issues with hash mismatching
-```
+```nix
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -124,7 +124,7 @@ The cleaner option, but can cause issues with hash mismatching
 <summary>Without overlays</summary>
 <br>
 The less clean option, but wont have issues with has mismatching
-```
+```nix
 {
     nixpkgs.url = "nixpkgs/nixos-unstable";
   inputs = {
