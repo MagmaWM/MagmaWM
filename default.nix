@@ -1,5 +1,8 @@
 { lib, pkgs, ...}:
 
+let
+pname = "magmawm";
+in
 pkgs.rustPlatform.buildRustPackage {
   src = ./.;
 
@@ -42,7 +45,7 @@ pkgs.rustPlatform.buildRustPackage {
     description = "A versatile and customizable Window Manager and Wayland Compositor";
     license = licenses.mit;
     maintainers = with maintainers; [ "HackedOS" "nixos-goddess" ];
-    mainProgram = "magmawm";
+    mainProgram = "$pname";
   };
 }
 
