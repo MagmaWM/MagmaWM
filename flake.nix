@@ -1,13 +1,13 @@
 {
-  	description = "A flake for MagmaWM";
+  description = "A flake for MagmaWM";
 
-  	inputs = {
-		nixpkgs.url = "github:nixos/nixpkgs";
-  		rust-overlay = {
-  			url = "github:oxalica/rust-overlay";
-  			inputs.nixpkgs.follows = "nixpkgs";
-  		};
-  	};
+  inputs = {
+    nixpkgs.url = "github:nixos/nixpkgs";
+    rust-overlay = {
+      url = "github:oxalica/rust-overlay";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
 
   outputs = {self, nixpkgs, rust-overlay, ...}: let
     systems = [
