@@ -81,7 +81,7 @@ The following are two different ways to go about installing MagmaWM
 <br>
 
 The cleaner option, but can cause issues with hash mismatching
-```nix
+```
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -117,7 +117,7 @@ The cleaner option, but can cause issues with hash mismatching
   };
 }
 ```
-and then install it like any other program using ``` pkgs.magmawm ```
+<!-- and then install it like any other program using ``` pkgs.magmawm ``` -->
 </details>
 
 <details>
@@ -126,8 +126,8 @@ and then install it like any other program using ``` pkgs.magmawm ```
 The less clean option, but wont have issues with has mismatching
 ```
 {
-  inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
+  inputs = {
     home-manager = {
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
