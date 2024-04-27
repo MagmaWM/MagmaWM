@@ -2,7 +2,7 @@
   description = "A flake for MagmaWM";
 
   inputs = {
-    nixpkgs.url = "github:nixos/nixpkgs";
+    nixpkgs.url = "github:nixos/nixpkgs/3af282374194ad97fd9642e7245f6264631282a2";
     rust-overlay = {
       url = "github:oxalica/rust-overlay";
       inputs.nixpkgs.follows = "nixpkgs";
