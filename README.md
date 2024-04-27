@@ -80,7 +80,7 @@ The following are two different ways to go about installing MagmaWM
 <summary>With overlays</summary>
 <br>
 The cleaner option, but can cause issues with hash mismatching
-```nix
+```
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -123,7 +123,7 @@ and then install it like any other program using ```pkgs.magmawm```
 <summary>Without overlays</summary>
 <br>
 The less clean option, but wont have issues with has mismatching
-```nix
+```
 {
   inputs = {
     nixpkgs.url = "nixpkgs/nixos-unstable";
@@ -140,8 +140,8 @@ The less clean option, but wont have issues with has mismatching
         system = "x86_64-linux";
         specialArgs = {inherit magmawm; };
         modules = [
-          ./holly/system
           home-manager.nixosModules.home-manager
+          ./holly/system
           {
             home-manager.useGlobalPkgs = true;
             home-manager.useUserPackages = true;
