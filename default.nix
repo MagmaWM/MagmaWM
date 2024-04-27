@@ -4,12 +4,7 @@ pkgs.rustPlatform.buildRustPackage rec {
   pname = "magmawm";
   version = "main";
 
-  src = pkgs.fetchFromGitHub {
-    owner = "MagmaWM";
-    repo = "MagmaWM";
-    rev = "${version}";
-    sha256 = "0i0yigm09g6c33vjpcjiplxkm0kbphaf1qmm6d7yfp0sqx16ql7f";
-  };
+  src = ./.;
 
   buildInputs = with pkgs; [
     libdrm
