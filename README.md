@@ -75,7 +75,6 @@ If you really want to, run the following command to install MagmaWM:
 
 #### Nixos
 The following are two different ways to go about installing MagmaWM
-##### With overlays
 
 <details>
 <summary>With overlays</summary>
