@@ -85,7 +85,7 @@ The cleaner option, but can cause issues with hash mismatching
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    magmawm.url = "path:./resources/magmawm";
+    magmawm.url = "github:MagmaWM/MagmaWM";
   };
 
   outputs = inputs@{ self, nixpkgs, home-manager, magmawm, ... }: {
@@ -124,7 +124,7 @@ The less clean option, but wont have issues with has mismatching
       url = "github:nix-community/home-manager";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    magmawm.url = "path:./resources/magmawm";
+    magmawm.url = "github:MagmaWM/MagmaWM";
   };
 
   outputs = inputs@{ self, nixpkgs, home-manager, magmawm, ... }: {
