@@ -1,10 +1,13 @@
-{ lib, pkgs, ...}: let
-  pname = "magmawm";
-  version = "main";
-in
+{ lib
+, pkgs
+, version
+, ...
+}:
+
 pkgs.rustPlatform.buildRustPackage {
-  inherit pname version;
-  src = ./.;
+  inherit version;
+  pname = "magmawm";
+  src = lib.cleanSource ./.;
 
   buildInputs = with pkgs; [
     libdrm
@@ -14,10 +17,10 @@ pkgs.rustPlatform.buildRustPackage {
     libxkbcommon
     mesa
     pkg-config
-    systemdLibs
+    systemdLibs # Contains libudev. DON'T PANIC: it won't install the whole init system
     wayland
     wayland-scanner
-    xorg.libX11
+    xorg.libX11 # Needed for xwayland to work
     xorg.libXcursor
     xorg.libXi
   ];
@@ -40,13 +43,10 @@ pkgs.rustPlatform.buildRustPackage {
     wrapProgram $out/bin/magmawm --prefix LD_LIBRARY_PATH : "${pkgs.libglvnd}/lib"
   '';
 
-  meta = with lib; {
-    homepage = "https://magmawm.org/";
+  meta = {
     description = "A versatile and customizable Window Manager and Wayland Compositor";
-    license = licenses.mit;
-    maintainers = with maintainers; [ "HackedOS" "nixos-goddess" ];
-    mainProgram = pname;
+    homepage = "https://magmawm.org/";
+    license = lib.licenses.mit;
+    mainProgram = "magmawm";
   };
 }
-
-
